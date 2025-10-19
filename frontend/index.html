@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker - Freelancer Edition</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="shortcut icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" href="favicon.png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Auth Screen -->
+        <div id="auth-screen" class="screen">
+            <div class="auth-container">
+                <img src="logo.png" alt="Twin Wicks Digital Solutions" class="logo" style="width: 240px; height: 240px; object-fit: contain; margin-bottom: 8px;">
+                <h1>Expense Tracker</h1>
+                <p class="subtitle">Track your freelance expenses with AI-powered receipt parsing</p>
+                
+                <div class="auth-tabs">
+                    <button class="tab-btn active" data-tab="login">Login</button>
+                    <button class="tab-btn" data-tab="signup">Sign Up</button>
+                </div>
+
+                <!-- Login Form -->
+                <form id="login-form" class="auth-form active">
+                    <div class="form-group">
+                        <label for="login-email">Email</label>
+                        <input type="email" id="login-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <input type="password" id="login-password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                    <div class="error-message" id="login-error"></div>
+                </form>
+
+                <!-- Signup Form -->
+                <form id="signup-form" class="auth-form">
+                    <div class="form-group">
+                        <label for="signup-email">Email</label>
+                        <input type="email" id="signup-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-password">Password</label>
+                        <input type="password" id="signup-password" required minlength="8">
+                        <small>Minimum 8 characters</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-confirm">Confirm Password</label>
+                        <input type="password" id="signup-confirm" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Sign Up</button>
+                    <div class="error-message" id="signup-error"></div>
+                    <div class="success-message" id="signup-success"></div>
+                </form>
+
+                <!-- Confirmation Form -->
+                <div id="confirmation-section" style="display: none; margin-top: 20px; padding: 20px; background: #f0f9ff; border-radius: 8px;">
+                    <h3 style="margin-top: 0;">Confirm Your Email</h3>
+                    <p>We've sent a confirmation code to your email. Please enter it below:</p>
+                    <form id="confirm-form">
+                        <input type="hidden" id="confirmation-email">
+                        <div class="form-group">
+                            <label for="confirmation-code">Confirmation Code</label>
+                            <input type="text" id="confirmation-code" required placeholder="Enter 6-digit code">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Confirm Email</button>
+                        <div class="error-message" id="confirm-error"></div>
+                        <div class="success-message" id="confirm-success"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main App Screen -->
+        <div id="main-screen" class="screen" style="display: none;">
+            <!-- Header -->
+            <header class="app-header">
+                <div class="container">
+                    <div class="header-brand">
+                        <img src="logo.png" alt="Twin Wicks Digital Solutions" class="header-logo" style="width: 105px; height: 105px; object-fit: contain;">
+                        <h1>Expense Tracker</h1>
+                    </div>
+                    <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle menu">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
+                    <div class="header-actions">
+                        <span id="user-email" class="user-info"></span>
+                        <button id="logout-btn" class="btn btn-secondary">Logout</button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Navigation -->
+            <nav class="app-nav" id="app-nav">
+                <div class="container">
+                    <button class="nav-btn active" data-view="dashboard">Dashboard</button>
+                    <button class="nav-btn" data-view="expenses">Expenses</button>
+                    <button class="nav-btn" data-view="projects">Projects</button>
+                    <button class="nav-btn" data-view="add-expense">Add Expense</button>
+                </div>
+            </nav>
+
+            <!-- Dashboard View -->
+            <div id="dashboard-view" class="view active">
+                <div class="container">
+                    <h2>Expense Dashboard</h2>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Total Expenses</h3>
+                            <p class="stat-value" id="total-expenses">$0.00</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>This Month</h3>
+                            <p class="stat-value" id="month-expenses">$0.00</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Transaction Count</h3>
+                            <p class="stat-value" id="transaction-count">0</p>
+                        </div>
+                    </div>
+
+                    <div class="chart-container">
+                        <h3>Expenses by Category</h3>
+                        <div id="category-chart" class="category-chart"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expenses List View -->
+            <div id="expenses-view" class="view">
+                <div class="container">
+                    <div class="view-header">
+                        <h2>All Expenses</h2>
+                        <div class="filters">
+                            <select id="sort-by">
+                                <option value="uploadDate-desc">Newest First</option>
+                                <option value="uploadDate-asc">Oldest First</option>
+                                <option value="amount-desc">Highest Amount</option>
+                                <option value="amount-asc">Lowest Amount</option>
+                            </select>
+                            <select id="filter-category">
+                                <option value="">All Categories</option>
+                                <option value="Office Supplies">Office Supplies</option>
+                                <option value="Travel">Travel</option>
+                                <option value="Meals">Meals</option>
+                                <option value="Software">Software</option>
+                                <option value="Equipment">Equipment</option>
+                                <option value="Marketing">Marketing</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <select id="filter-project">
+                                <option value="">All Projects</option>
+                                <!-- Projects will be loaded dynamically -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="expenses-list" class="expenses-list">
+                        <!-- Expenses will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Projects View -->
+            <div id="projects-view" class="view">
+                <div class="container">
+                    <div class="view-header">
+                        <h2>Projects</h2>
+                        <button id="add-project-btn" class="btn btn-primary">+ Add Project</button>
+                    </div>
+                    
+                    <div id="projects-list" class="projects-list">
+                        <!-- Projects will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Expense View -->
+            <div id="add-expense-view" class="view">
+                <div class="container">
+                    <h2>Add New Expense</h2>
+                    
+                    <div class="upload-section">
+                        <div class="upload-area" id="upload-area">
+                            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <p>Drag & drop receipt (image, PDF, or Word doc) here or click to browse</p>
+                            <input type="file" id="receipt-input" accept="image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display: none;">
+                        </div>
+                        
+                        <div id="preview-section" style="display: none;">
+                            <img id="receipt-preview" alt="Receipt preview">
+                            <button id="remove-receipt" class="btn btn-secondary">Remove</button>
+                        </div>
+                    </div>
+
+                    <div id="parsing-status" class="parsing-status" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>Parsing receipt with AI...</p>
+                    </div>
+
+                    <form id="expense-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="expense-vendor">Vendor *</label>
+                                <input type="text" id="expense-vendor" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="expense-amount">Amount *</label>
+                                <input type="number" id="expense-amount" step="0.01" min="0" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="expense-date">Date *</label>
+                                <input type="date" id="expense-date" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="expense-category">Category *</label>
+                                <select id="expense-category" required>
+                                    <option value="">Select category</option>
+                                    <option value="Office Supplies">Office Supplies</option>
+                                    <option value="Travel">Travel</option>
+                                    <option value="Meals">Meals</option>
+                                    <option value="Software">Software</option>
+                                    <option value="Equipment">Equipment</option>
+                                    <option value="Marketing">Marketing</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="expense-project">Project (Optional)</label>
+                            <select id="expense-project">
+                                <option value="">No Project</option>
+                                <!-- Projects will be loaded dynamically -->
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="expense-description">Description</label>
+                            <textarea id="expense-description" rows="3"></textarea>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Save Expense</button>
+                            <button type="button" id="cancel-expense" class="btn btn-secondary">Cancel</button>
+                        </div>
+
+                        <div class="error-message" id="expense-error"></div>
+                        <div class="success-message" id="expense-success"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Expense Modal -->
+        <div id="edit-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Edit Expense</h2>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <form id="edit-expense-form">
+                    <input type="hidden" id="edit-transaction-id">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit-vendor">Vendor *</label>
+                            <input type="text" id="edit-vendor" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-amount">Amount *</label>
+                            <input type="number" id="edit-amount" step="0.01" min="0" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit-date">Date *</label>
+                            <input type="date" id="edit-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-category">Category *</label>
+                            <select id="edit-category" required>
+                                <option value="">Select category</option>
+                                <option value="Office Supplies">Office Supplies</option>
+                                <option value="Travel">Travel</option>
+                                <option value="Meals">Meals</option>
+                                <option value="Software">Software</option>
+                                <option value="Equipment">Equipment</option>
+                                <option value="Marketing">Marketing</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit-project">Project (Optional)</label>
+                        <select id="edit-project">
+                            <option value="">No Project</option>
+                            <!-- Projects will be loaded dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit-description">Description</label>
+                        <textarea id="edit-description" rows="3"></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Update Expense</button>
+                        <button type="button" class="close-modal btn btn-secondary">Cancel</button>
+                    </div>
+
+                    <div class="error-message" id="edit-error"></div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Project Modal -->
+        <div id="project-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="project-modal-title">Add Project</h2>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <form id="project-form">
+                    <input type="hidden" id="project-id">
+                    
+                    <div class="form-group">
+                        <label for="project-name">Project Name *</label>
+                        <input type="text" id="project-name" required maxlength="120" placeholder="Client Name or Project Name">
+                        <small>Max 120 characters</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="project-description">Description</label>
+                        <textarea id="project-description" rows="3" maxlength="500" placeholder="Optional project details"></textarea>
+                        <small>Max 500 characters</small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="save-project-btn">Save Project</button>
+                        <button type="button" class="close-modal btn btn-secondary">Cancel</button>
+                    </div>
+
+                    <div class="error-message" id="project-error"></div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay" style="display: none;">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Mobile menu toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+            const appNav = document.getElementById('app-nav');
+            
+            if (mobileMenuToggle && appNav) {
+                mobileMenuToggle.addEventListener('click', function() {
+                    this.classList.toggle('active');
+                    appNav.classList.toggle('mobile-open');
+                });
+
+                // Close menu when clicking nav buttons
+                const navButtons = appNav.querySelectorAll('.nav-btn');
+                navButtons.forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        mobileMenuToggle.classList.remove('active');
+                        appNav.classList.remove('mobile-open');
+                    });
+                });
+
+                // Close menu when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!appNav.contains(e.target) && !mobileMenuToggle.contains(e.target)) {
+                        mobileMenuToggle.classList.remove('active');
+                        appNav.classList.remove('mobile-open');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
+

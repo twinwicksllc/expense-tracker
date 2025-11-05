@@ -206,29 +206,49 @@ exports.handler = async (event) => {
     try {
         let results = [];
         
+        // Parse months from request body (works for both API Gateway and EventBridge)
+        let months = 1;
+        if (event.body) {
+            try {
+                // Decode base64 if needed (API Gateway encodes body)
+                let bodyString = event.body;
+                if (event.isBase64Encoded) {
+                    bodyString = Buffer.from(event.body, 'base64').toString('utf-8');
+                }
+                const body = JSON.parse(bodyString);
+                months = parseInt(body.months) || 1;
+                console.log(`Parsed months parameter: ${months}`);
+            } catch (e) {
+                console.log('Could not parse request body:', e.message, 'defaulting to 1 month');
+            }
+        }
+        
         // Check if this is a manual trigger for a specific user (API Gateway)
         if (event.requestContext && event.requestContext.authorizer) {
+            console.log('Manual import via API Gateway with authorizer');
             const userId = event.requestContext.authorizer.claims.sub;
-            
-            // Parse months from request body (default to 1)
-            let months = 1;
-            if (event.body) {
-                try {
-                    // Decode base64 if needed (API Gateway encodes body)
-                    let bodyString = event.body;
-                    if (event.isBase64Encoded) {
-                        bodyString = Buffer.from(event.body, 'base64').toString('utf-8');
-                    }
-                    const body = JSON.parse(bodyString);
-                    months = parseInt(body.months) || 1;
-                    console.log(`Manual import requested for ${months} month(s)`);
-                } catch (e) {
-                    console.log('Could not parse request body:', e.message, 'defaulting to 1 month');
-                }
-            }
-            
             const result = await importCostsForUser(userId, months);
             results.push(result);
+        } else if (event.requestContext && !event.requestContext.authorizer) {
+            // API Gateway request but no authorizer (need to get userId from credentials table)
+            console.log('Manual import via API Gateway without authorizer');
+            
+            // Get all users with AWS credentials configured
+            const scanResult = await docClient.send(new ScanCommand({
+                TableName: CREDENTIALS_TABLE,
+                FilterExpression: 'enabled = :enabled',
+                ExpressionAttributeValues: {
+                    ':enabled': true
+                }
+            }));
+            
+            console.log(`Found ${scanResult.Items.length} users with AWS credentials enabled`);
+            
+            // Import for each user with the specified number of months
+            for (const credentials of scanResult.Items) {
+                const result = await importCostsForUser(credentials.userId, months);
+                results.push(result);
+            }
         } else {
             // Scheduled trigger (EventBridge) - import for all users
             console.log('Scheduled import for all users');
@@ -246,7 +266,7 @@ exports.handler = async (event) => {
             
             // Import costs for each user
             for (const item of scanResult.Items) {
-                const result = await importCostsForUser(item.userId);
+                const result = await importCostsForUser(item.userId, months);
                 results.push(result);
             }
         }

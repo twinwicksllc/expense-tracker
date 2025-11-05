@@ -2,6 +2,26 @@
 
 All notable changes to the Expense Tracker project will be documented in this file.
 
+## [1.2.4] - 2025-11-05
+
+### Fixed
+- **CRITICAL:** Fixed multi-month AWS cost import - months parameter now correctly parsed and passed to all code paths
+- Fixed missing API Gateway authorizer handling - Lambda now works with or without authorizer
+- Fixed EventBridge scheduled import path to respect months parameter (was missing months argument)
+- Verified with Perplexity AI code review to catch edge cases
+- Confirmed: 12-month import now successfully imports expenses from all months (Aug, Sep, Oct, etc.)
+- Database verification: 9 expenses from August and September now present
+
+### Changed
+- Refactored handler to parse months parameter before checking authorizer
+- Added support for three trigger types: API Gateway (with/without authorizer) and EventBridge
+- All three code paths now consistently pass months parameter to importCostsForUser()
+
+### Technical Details
+- Moved months parsing outside of authorizer conditional
+- Added dedicated path for API Gateway without authorizer (scans credentials table)
+- Fixed line 269: `importCostsForUser(item.userId)` → `importCostsForUser(item.userId, months)`
+
 ## [1.2.3] - 2025-11-05
 
 ### Fixed

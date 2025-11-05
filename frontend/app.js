@@ -1345,6 +1345,16 @@ async function saveAWSCredentials() {
         hideLoading();
         showSuccess('aws-credentials-success', 'AWS credentials saved successfully!');
         
+        // Retrieve and display IAM ARN
+        try {
+            const arn = await getIAMUserARN(accessKeyId, secretAccessKey, region);
+            if (arn) {
+                displayIAMARN(arn);
+            }
+        } catch (error) {
+            console.error('Could not retrieve IAM ARN:', error);
+        }
+        
         setTimeout(() => {
             hideAWSCredentialsForm();
             loadAWSCredentialsStatus();
@@ -1437,4 +1447,67 @@ window.deleteAWSCredentials = deleteAWSCredentials;
 window.toggleAWSCredentials = toggleAWSCredentials;
 window.manualImportCosts = manualImportCosts;
 window.loadAWSCredentialsStatus = loadAWSCredentialsStatus;
+
+
+
+
+// ==================== IAM ARN HELPER FUNCTIONS ====================
+
+async function getIAMUserARN(accessKeyId, secretAccessKey, region) {
+    // Call AWS STS GetCallerIdentity to retrieve the IAM user ARN
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/aws-get-caller-identity`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('idToken')}`
+            },
+            body: JSON.stringify({
+                accessKeyId,
+                secretAccessKey,
+                region
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to retrieve IAM ARN');
+        }
+        
+        const data = await response.json();
+        return data.arn;
+    } catch (error) {
+        console.error('Error retrieving IAM ARN:', error);
+        return null;
+    }
+}
+
+function displayIAMARN(arn) {
+    const arnDisplay = document.getElementById('iam-arn-display');
+    const arnValue = document.getElementById('iam-arn-value');
+    const copyBtn = document.getElementById('copy-arn');
+    
+    if (arnDisplay && arnValue) {
+        arnValue.textContent = arn;
+        arnDisplay.style.display = 'block';
+        
+        // Add copy functionality
+        if (copyBtn) {
+            copyBtn.onclick = () => {
+                navigator.clipboard.writeText(arn).then(() => {
+                    const originalText = copyBtn.textContent;
+                    copyBtn.textContent = '✓ Copied!';
+                    setTimeout(() => {
+                        copyBtn.textContent = originalText;
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy ARN:', err);
+                });
+            };
+        }
+    }
+}
+
+// Export new functions
+window.getIAMUserARN = getIAMUserARN;
+window.displayIAMARN = displayIAMARN;
 

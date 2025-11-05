@@ -304,6 +304,15 @@
                             </select>
                         </div>
                         
+                        <div class="form-group" id="iam-arn-display" style="display: none;">
+                            <label>IAM User ARN</label>
+                            <div class="arn-display">
+                                <code id="iam-arn-value"></code>
+                                <button type="button" id="copy-arn" class="btn-copy" title="Copy ARN">📋</button>
+                            </div>
+                            <small>This is your IAM user's Amazon Resource Name</small>
+                        </div>
+                        
                         <div class="form-actions">
                             <button type="button" id="save-aws-credentials" class="btn btn-primary">Save Credentials</button>
                             <button type="button" id="cancel-aws-credentials" class="btn btn-secondary">Cancel</button>
@@ -313,14 +322,66 @@
                         <div class="success-message" id="aws-credentials-success"></div>
                     </div>
                     
+                    <div class="info-box setup-instructions">
+                        <h4>📋 Step-by-Step: Create an IAM User for Cost Tracking</h4>
+                        <ol class="setup-steps">
+                            <li>
+                                <strong>Open AWS IAM Console</strong>
+                                <p>Go to <a href="https://console.aws.amazon.com/iam/" target="_blank">AWS IAM Console</a> and sign in to your AWS account.</p>
+                            </li>
+                            <li>
+                                <strong>Create a New IAM User</strong>
+                                <p>Click "Users" in the left sidebar, then click "Create user".</p>
+                                <p>Enter a username like <code>expense-tracker-cost-reader</code>.</p>
+                            </li>
+                            <li>
+                                <strong>Set Permissions</strong>
+                                <p>Select "Attach policies directly" and click "Create policy".</p>
+                                <p>In the JSON tab, paste this policy:</p>
+                                <pre><code>{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ce:GetCostAndUsage",
+        "ce:GetCostForecast"
+      ],
+      "Resource": "*"
+    }
+  ]
+}</code></pre>
+                                <p>Name it <code>CostExplorerReadOnly</code> and create the policy.</p>
+                            </li>
+                            <li>
+                                <strong>Attach the Policy</strong>
+                                <p>Go back to user creation, refresh policies, and attach <code>CostExplorerReadOnly</code>.</p>
+                            </li>
+                            <li>
+                                <strong>Create Access Keys</strong>
+                                <p>After creating the user, click on the user name, go to "Security credentials" tab.</p>
+                                <p>Click "Create access key", select "Application running outside AWS", and click "Create".</p>
+                            </li>
+                            <li>
+                                <strong>Save Your Credentials</strong>
+                                <p>Copy the <strong>Access Key ID</strong> and <strong>Secret Access Key</strong>.</p>
+                                <p class="warning-text">⚠️ This is the only time you'll see the secret key! Save it securely.</p>
+                            </li>
+                            <li>
+                                <strong>Enter Credentials Above</strong>
+                                <p>Paste your Access Key ID and Secret Access Key in the form above and click "Save Credentials".</p>
+                            </li>
+                        </ol>
+                    </div>
+                    
                     <div class="info-box">
-                        <h4>Required IAM Permissions</h4>
-                        <p>Your AWS IAM user needs the following permissions:</p>
+                        <h4>🔒 Security & Privacy</h4>
                         <ul>
-                            <li><code>ce:GetCostAndUsage</code> - Read cost data</li>
-                            <li><code>ce:GetCostForecast</code> - (Optional) Cost forecasting</li>
+                            <li>Your Secret Access Key is encrypted using AES-256-GCM before storage</li>
+                            <li>The IAM user only has read-only access to cost data</li>
+                            <li>No other AWS resources can be accessed with these credentials</li>
+                            <li>You can revoke access anytime by deleting the IAM user in AWS</li>
                         </ul>
-                        <p><a href="https://docs.aws.amazon.com/cost-management/latest/userguide/ce-api.html" target="_blank">Learn more about AWS Cost Explorer API</a></p>
                     </div>
                 </div>
             </div>

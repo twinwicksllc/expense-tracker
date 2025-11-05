@@ -187,3 +187,130 @@
     }
 }
 
+
+
+/* Setup Instructions Styles */
+.setup-instructions {
+    background: #f8f9fa;
+    border-left: 4px solid #007bff;
+    margin-top: 2rem;
+}
+
+.setup-steps {
+    counter-reset: step-counter;
+    list-style: none;
+    padding-left: 0;
+}
+
+.setup-steps li {
+    counter-increment: step-counter;
+    margin-bottom: 1.5rem;
+    padding-left: 3rem;
+    position: relative;
+}
+
+.setup-steps li::before {
+    content: counter(step-counter);
+    position: absolute;
+    left: 0;
+    top: 0;
+    background: #007bff;
+    color: white;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.setup-steps li strong {
+    display: block;
+    color: #333;
+    margin-bottom: 0.5rem;
+    font-size: 1.05rem;
+}
+
+.setup-steps li p {
+    margin: 0.5rem 0;
+    color: #666;
+    line-height: 1.6;
+}
+
+.setup-steps pre {
+    background: #2d2d2d;
+    color: #f8f8f2;
+    padding: 1rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 0.5rem 0;
+}
+
+.setup-steps code {
+    background: #e9ecef;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    color: #d63384;
+}
+
+.setup-steps pre code {
+    background: transparent;
+    padding: 0;
+    color: #f8f8f2;
+}
+
+/* IAM ARN Display Styles */
+.arn-display {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #f8f9fa;
+    padding: 0.75rem;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+
+.arn-display code {
+    flex: 1;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    color: #495057;
+    word-break: break-all;
+}
+
+.btn-copy {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.2s;
+}
+
+.btn-copy:hover {
+    background: #0056b3;
+}
+
+/* Responsive Design for Setup Instructions */
+@media (max-width: 768px) {
+    .setup-steps li {
+        padding-left: 2.5rem;
+    }
+    
+    .setup-steps li::before {
+        width: 1.75rem;
+        height: 1.75rem;
+        font-size: 0.85rem;
+    }
+    
+    .setup-steps pre {
+        font-size: 0.85rem;
+    }
+}
+

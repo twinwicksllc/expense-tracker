@@ -44,6 +44,9 @@ expense-tracker-repo/
 - Project management (CRUD)
 - Expense-to-project assignment
 - Project expense totals calculation
+- AWS credentials management with encryption
+- Automatic AWS cost import (monthly)
+- Manual AWS cost import
 
 ### In Progress ⚠️
 - Frontend event listeners for Save/Delete buttons
@@ -64,6 +67,8 @@ expense-tracker-repo/
 - `expense-tracker-prod-deleteExpense` - Expense deletion
 - `expense-tracker-prod-getDashboard` - Dashboard data
 - `expense-tracker-prod-parseReceipt` - AI receipt parsing
+- `expense-tracker-prod-aws-credentials` - AWS credentials management
+- `expense-tracker-prod-aws-cost-import` - AWS cost import automation
 
 ### API Gateway
 - **API ID**: fcnq8h7mai
@@ -75,6 +80,10 @@ expense-tracker-repo/
   - GET/PUT/DELETE `/expenses/{id}`
   - GET `/dashboard`
   - POST `/parse-receipt`
+  - GET/POST/DELETE `/aws-credentials` - AWS credentials management
+  - POST `/aws-cost-import` - Manual cost import trigger
+
+**CORS Configuration**: All endpoints properly configured with CORS headers for `app.twin-wicks.com` origin. OPTIONS methods use MOCK integration with JavaScript object notation template `{statusCode:200}` for reliable preflight handling.
 
 ### S3 Buckets
 - `twin-wicks.com` - Frontend hosting
@@ -271,6 +280,13 @@ Proprietary - Twin Wicks Digital Solutions
   - Expense-to-project assignment
   - Project expense totals calculation
   - Known issues with frontend event listeners
+- **v1.2** (Nov 2025) - Added AWS cost tracking integration
+  - AWS credentials management with AES-256 encryption
+  - Automatic monthly AWS cost import via EventBridge
+  - Manual cost import capability
+  - Settings page for credential configuration
+  - Fixed CORS issues on all API endpoints
+  - Proper MOCK integration configuration for OPTIONS methods
 
 ## Contributors
 

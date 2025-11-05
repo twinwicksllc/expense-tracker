@@ -34,11 +34,14 @@ The feature consists of four main components that work together to provide seaml
 
 ## API Endpoints
 
+**Note**: All endpoints are properly configured with CORS headers to allow cross-origin requests from `app.twin-wicks.com`. As of November 2025, CORS preflight (OPTIONS) requests are handled by MOCK integrations using the correct JavaScript object notation template format.
+
 ### GET /aws-credentials
 
 Retrieves the status of the user's AWS credentials without exposing sensitive data.
 
 **Authentication**: Required (Cognito JWT)
+**CORS**: Enabled
 
 **Response**:
 ```json
@@ -55,6 +58,7 @@ Retrieves the status of the user's AWS credentials without exposing sensitive da
 Saves or updates the user's AWS credentials with encryption.
 
 **Authentication**: Required (Cognito JWT)
+**CORS**: Enabled
 
 **Request Body**:
 ```json
@@ -79,6 +83,7 @@ Saves or updates the user's AWS credentials with encryption.
 Removes the user's AWS credentials from the system.
 
 **Authentication**: Required (Cognito JWT)
+**CORS**: Enabled
 
 **Response**:
 ```json
@@ -102,9 +107,11 @@ Enables or disables automatic cost imports without modifying credentials.
 
 ### POST /aws-cost-import
 
-Manually triggers a cost import for all users with configured credentials.
+Manually triggers a cost import for the current user's AWS account.
 
 **Authentication**: Required (Cognito JWT)
+**CORS**: Enabled
+**Status**: ✅ Fully operational as of November 2025
 
 **Response**:
 ```json
@@ -209,4 +216,53 @@ The AWS Cost Tracking feature incurs minimal costs:
 - **Cost Explorer API**: $0.01 per request (1 request per user per month)
 
 For most users, the total monthly cost is less than $0.10.
+
+
+
+## Technical Notes
+
+### CORS Configuration (November 2025 Update)
+
+The AWS credentials and cost import endpoints experienced CORS issues that were resolved through proper API Gateway configuration. Key learnings:
+
+**Issue**: CORS preflight (OPTIONS) requests were returning HTTP 500 errors, blocking browser requests.
+
+**Root Cause**: API Gateway MOCK integrations require JavaScript object notation in request templates, not standard JSON format.
+
+**Solution**:
+- Changed request template from `{"statusCode": 200}` to `{statusCode:200}` (no quotes around keys)
+- Created `/aws-cost-import` endpoint with proper CORS configuration
+- Configured MOCK integration for OPTIONS methods with correct template format
+
+**CORS Headers Applied**:
+```
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: OPTIONS,GET,POST,PUT,DELETE
+Access-Control-Allow-Headers: Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent
+```
+
+**Testing CORS**:
+```bash
+# Test aws-credentials OPTIONS
+curl -X OPTIONS https://fcnq8h7mai.execute-api.us-east-1.amazonaws.com/prod/aws-credentials \
+  -H "Origin: https://app.twin-wicks.com" -v
+
+# Test aws-cost-import OPTIONS
+curl -X OPTIONS https://fcnq8h7mai.execute-api.us-east-1.amazonaws.com/prod/aws-cost-import \
+  -H "Origin: https://app.twin-wicks.com" -v
+```
+
+Both should return HTTP 200 with proper CORS headers.
+
+### API Gateway Configuration Details
+
+**Resource IDs**:
+- `/aws-credentials`: 72a8r4
+- `/aws-cost-import`: jrlinu
+
+**Integration Type**: 
+- OPTIONS methods: MOCK (for CORS preflight)
+- GET/POST/DELETE methods: AWS_PROXY (Lambda integration)
+
+**Important**: When modifying API Gateway resources, always deploy to the `prod` stage for changes to take effect.
 

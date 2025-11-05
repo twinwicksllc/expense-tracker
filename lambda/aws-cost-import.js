@@ -10,7 +10,7 @@ const docClient = DynamoDBDocumentClient.from(ddbClient);
 const TRANSACTIONS_TABLE = process.env.TRANSACTIONS_TABLE || 'expense-tracker-transactions-prod';
 const CREDENTIALS_TABLE = process.env.CREDENTIALS_TABLE || 'expense-tracker-aws-credentials-prod';
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
-const MIN_AMOUNT = parseFloat(process.env.MIN_AMOUNT || '1.00');
+// MIN_AMOUNT filter removed - import all expenses regardless of amount
 
 // Decrypt function (same as in aws-credentials.js)
 function decrypt(encryptedData) {
@@ -129,12 +129,8 @@ async function importCostsForUser(userId, months = 1) {
                 const serviceName = group.Keys[0];
                 const amount = parseFloat(group.Metrics.UnblendedCost.Amount);
                 
-                // Skip if amount is too small
-                if (amount < MIN_AMOUNT) {
-                    console.log(`Skipping ${serviceName}: $${amount.toFixed(2)} (below minimum)`);
-                    totalSkipped++;
-                    continue;
-                }
+                // Import all expenses, no minimum threshold
+                // (Previously filtered out amounts below $1.00)
                 
                 const vendor = `AWS - ${serviceName}`;
                 const expenseAmount = parseFloat(amount.toFixed(2));

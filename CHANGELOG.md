@@ -2,6 +2,20 @@
 
 All notable changes to the Expense Tracker project will be documented in this file.
 
+## [1.2.1] - 2025-11-05
+
+### Changed
+- **Removed Minimum Threshold**: AWS cost import now imports ALL expenses regardless of amount
+  - Previously filtered out charges below $1.00
+  - Now imports even small charges like $0.01, $0.10, etc.
+  - Removed `MIN_AMOUNT` environment variable from Lambda function
+  - Updated code to remove threshold check
+
+### Technical Details
+- Removed `MIN_AMOUNT` constant and filter logic from `aws-cost-import.js`
+- Removed `MIN_AMOUNT` environment variable from Lambda configuration
+- `belowMinimumSkipped` count will now always be 0 in import responses
+
 ## [1.2.0] - 2025-11-05
 
 ### Added

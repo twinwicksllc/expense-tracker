@@ -112,6 +112,7 @@ async function importCostsForUser(userId) {
                 }
                 
                 const transactionId = uuidv4();
+                const now = new Date().toISOString();
                 const expense = {
                     userId,
                     transactionId,
@@ -120,8 +121,9 @@ async function importCostsForUser(userId) {
                     date: endDate,
                     category: 'Software',
                     description: `AWS ${serviceName} charges for ${lastMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}`,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
+                    uploadDate: now,
+                    createdAt: now,
+                    updatedAt: now,
                     source: 'aws-auto-import'
                 };
                 

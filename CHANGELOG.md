@@ -2,6 +2,15 @@
 
 All notable changes to the Expense Tracker project will be documented in this file.
 
+## [1.1.1] - 2025-11-05
+
+### Fixed
+- **AWS Cost Import Bug**: Fixed issue where imported AWS expenses were not appearing in the Expenses tab or Dashboard
+  - Added missing `uploadDate` field to expense records created by `aws-cost-import` Lambda function
+  - The `getExpenses` function queries using `userId-uploadDate-index` GSI which requires this field
+  - All imported expenses now include `uploadDate`, `createdAt`, and `updatedAt` timestamps
+  - Updated Lambda deployment to include all required `node_modules` dependencies
+
 ## [1.1.0] - 2025-11-05
 
 ### Added - AWS Cost Tracking Feature

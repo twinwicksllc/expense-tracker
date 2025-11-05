@@ -129,8 +129,12 @@ async function importCostsForUser(userId, months = 1) {
                 const serviceName = group.Keys[0];
                 const amount = parseFloat(group.Metrics.UnblendedCost.Amount);
                 
-                // Import all expenses, no minimum threshold
-                // (Previously filtered out amounts below $1.00)
+                // Skip if amount is exactly $0.00 (but keep small amounts like $0.01)
+                if (amount === 0 || amount < 0.01) {
+                    console.log(`Skipping ${serviceName}: $${amount.toFixed(2)} (zero or negligible cost)`);
+                    totalSkipped++;
+                    continue;
+                }
                 
                 const vendor = `AWS - ${serviceName}`;
                 const expenseAmount = parseFloat(amount.toFixed(2));

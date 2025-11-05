@@ -2,19 +2,29 @@
 
 All notable changes to the Expense Tracker project will be documented in this file.
 
-## [1.2.1] - 2025-11-05
+## [1.2.2] - 2025-11-05
+
+### Fixed
+- **Zero-Cost Services Filter**: Fixed issue where $0.00 AWS services were being imported
+  - Now filters out services with exactly $0.00 cost
+  - Still imports small legitimate charges (≥$0.01)
+  - Deleted 22 existing zero-cost expenses from database
+  - Services like Tax, CloudWatch, Textract with $0.00 will no longer be imported
 
 ### Changed
-- **Removed Minimum Threshold**: AWS cost import now imports ALL expenses regardless of amount
-  - Previously filtered out charges below $1.00
-  - Now imports even small charges like $0.01, $0.10, etc.
-  - Removed `MIN_AMOUNT` environment variable from Lambda function
-  - Updated code to remove threshold check
+- Updated filter logic to skip amounts that are 0 or less than $0.01
+- Improved logging to show "zero or negligible cost" for skipped services
 
 ### Technical Details
-- Removed `MIN_AMOUNT` constant and filter logic from `aws-cost-import.js`
-- Removed `MIN_AMOUNT` environment variable from Lambda configuration
-- `belowMinimumSkipped` count will now always be 0 in import responses
+- Filter condition: `if (amount === 0 || amount < 0.01)`
+- Keeps legitimate small charges like $0.01 (Others), $0.02 (DynamoDB), etc.
+- Excludes free-tier services and services not actually used
+
+## [1.2.1] - 2025-11-05 (REVERTED)
+
+### Changed
+- ~~Removed Minimum Threshold~~ (This was incorrect - imported too many $0.00 services)
+- Reverted in v1.2.2 with proper zero-cost filtering
 
 ## [1.2.0] - 2025-11-05
 

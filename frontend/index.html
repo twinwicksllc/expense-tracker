@@ -8,6 +8,7 @@
     <link rel="shortcut icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" href="favicon.png">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="settings-styles.css">
 </head>
 <body>
     <div id="app">
@@ -103,6 +104,7 @@
                     <button class="nav-btn" data-view="expenses">Expenses</button>
                     <button class="nav-btn" data-view="projects">Projects</button>
                     <button class="nav-btn" data-view="add-expense">Add Expense</button>
+                    <button class="nav-btn" data-view="settings">Settings</button>
                 </div>
             </nav>
 
@@ -262,6 +264,64 @@
                         <div class="error-message" id="expense-error"></div>
                         <div class="success-message" id="expense-success"></div>
                     </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings View -->
+        <div id="settings-view" class="view">
+            <div class="container">
+                <h2>Settings</h2>
+                
+                <div class="settings-section">
+                    <h3>AWS Cost Tracking</h3>
+                    <p class="settings-description">Connect your AWS account to automatically import monthly cost data as expenses.</p>
+                    
+                    <div id="aws-credentials-status" class="credential-status">
+                        <!-- Status will be loaded here -->
+                    </div>
+                    
+                    <div id="aws-credentials-form" class="credentials-form" style="display: none;">
+                        <div class="form-group">
+                            <label for="aws-access-key">AWS Access Key ID *</label>
+                            <input type="text" id="aws-access-key" placeholder="AKIA..." required>
+                            <small>Your AWS IAM access key with Cost Explorer read permissions</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="aws-secret-key">AWS Secret Access Key *</label>
+                            <input type="password" id="aws-secret-key" placeholder="Enter secret key" required>
+                            <small>This will be encrypted and stored securely</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="aws-region">AWS Region</label>
+                            <select id="aws-region">
+                                <option value="us-east-1">US East (N. Virginia)</option>
+                                <option value="us-west-2">US West (Oregon)</option>
+                                <option value="eu-west-1">EU (Ireland)</option>
+                                <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" id="save-aws-credentials" class="btn btn-primary">Save Credentials</button>
+                            <button type="button" id="cancel-aws-credentials" class="btn btn-secondary">Cancel</button>
+                        </div>
+                        
+                        <div class="error-message" id="aws-credentials-error"></div>
+                        <div class="success-message" id="aws-credentials-success"></div>
+                    </div>
+                    
+                    <div class="info-box">
+                        <h4>Required IAM Permissions</h4>
+                        <p>Your AWS IAM user needs the following permissions:</p>
+                        <ul>
+                            <li><code>ce:GetCostAndUsage</code> - Read cost data</li>
+                            <li><code>ce:GetCostForecast</code> - (Optional) Cost forecasting</li>
+                        </ul>
+                        <p><a href="https://docs.aws.amazon.com/cost-management/latest/userguide/ce-api.html" target="_blank">Learn more about AWS Cost Explorer API</a></p>
+                    </div>
                 </div>
             </div>
         </div>

@@ -349,6 +349,8 @@ function switchView(viewName) {
         resetExpenseForm();
     } else if (viewName === 'projects') {
         loadProjects();
+    } else if (viewName === 'settings') {
+        loadAWSCredentialsStatus();
     }
 }
 
@@ -852,6 +854,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize project events
     initializeProjectEvents();
     
+    // Initialize settings view
+    initializeSettingsView();
+    
     // Load projects on app start if authenticated
     if (checkAuth()) {
         loadProjectDropdowns().catch(console.error);
@@ -1182,4 +1187,254 @@ window.editProject = editProject;
 window.deleteProjectConfirm = deleteProjectConfirm;
 window.showProjectModal = showProjectModal;
 window.hideProjectModal = hideProjectModal;
+
+
+
+
+// ==================== AWS CREDENTIALS MANAGEMENT ====================
+
+const AWSCredentialsAPI = {
+    async getStatus() {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/aws-credentials`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('idToken')}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        if (!response.ok) throw new Error('Failed to get credentials status');
+        return response.json();
+    },
+    
+    async save(credentials) {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/aws-credentials`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('idToken')}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(credentials)
+        });
+        if (!response.ok) throw new Error('Failed to save credentials');
+        return response.json();
+    },
+    
+    async delete() {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/aws-credentials`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('idToken')}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        if (!response.ok) throw new Error('Failed to delete credentials');
+        return response.json();
+    },
+    
+    async toggle(enabled) {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/aws-credentials/toggle`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('idToken')}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ enabled })
+        });
+        if (!response.ok) throw new Error('Failed to toggle credentials');
+        return response.json();
+    },
+    
+    async importCosts() {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/aws-cost-import`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('idToken')}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        if (!response.ok) throw new Error('Failed to import costs');
+        return response.json();
+    }
+};
+
+async function loadAWSCredentialsStatus() {
+    try {
+        const status = await AWSCredentialsAPI.getStatus();
+        const statusContainer = document.getElementById('aws-credentials-status');
+        
+        if (status.configured) {
+            statusContainer.innerHTML = `
+                <div class="credential-configured">
+                    <div class="status-header">
+                        <span class="status-badge ${status.enabled ? 'enabled' : 'disabled'}">
+                            ${status.enabled ? '✓ Enabled' : '✗ Disabled'}
+                        </span>
+                        <div class="status-actions">
+                            <button class="btn btn-sm ${status.enabled ? 'btn-secondary' : 'btn-primary'}" 
+                                    onclick="toggleAWSCredentials(${!status.enabled})">
+                                ${status.enabled ? 'Disable' : 'Enable'}
+                            </button>
+                            <button class="btn btn-sm btn-secondary" onclick="showAWSCredentialsForm()">
+                                Update Credentials
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteAWSCredentials()">
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                    <div class="status-info">
+                        <p><strong>Region:</strong> ${status.region}</p>
+                        <p><strong>Last Updated:</strong> ${formatDate(status.updatedAt)}</p>
+                        ${status.enabled ? '<p class="info-text">✓ AWS costs will be automatically imported monthly</p>' : '<p class="warning-text">⚠ Automatic import is disabled</p>'}
+                    </div>
+                    <div class="manual-import">
+                        <button class="btn btn-primary" onclick="manualImportCosts()">
+                            Import Costs Now
+                        </button>
+                        <small>Manually trigger cost import for the previous month</small>
+                    </div>
+                </div>
+            `;
+        } else {
+            statusContainer.innerHTML = `
+                <div class="credential-not-configured">
+                    <p>No AWS credentials configured</p>
+                    <button class="btn btn-primary" onclick="showAWSCredentialsForm()">
+                        + Add AWS Credentials
+                    </button>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading AWS credentials status:', error);
+        showError('aws-credentials-error', 'Failed to load credentials status');
+    }
+}
+
+function showAWSCredentialsForm() {
+    document.getElementById('aws-credentials-form').style.display = 'block';
+    document.getElementById('aws-access-key').value = '';
+    document.getElementById('aws-secret-key').value = '';
+    document.getElementById('aws-region').value = 'us-east-1';
+}
+
+function hideAWSCredentialsForm() {
+    document.getElementById('aws-credentials-form').style.display = 'none';
+    document.getElementById('aws-access-key').value = '';
+    document.getElementById('aws-secret-key').value = '';
+}
+
+async function saveAWSCredentials() {
+    const accessKeyId = document.getElementById('aws-access-key').value.trim();
+    const secretAccessKey = document.getElementById('aws-secret-key').value.trim();
+    const region = document.getElementById('aws-region').value;
+    
+    if (!accessKeyId || !secretAccessKey) {
+        showError('aws-credentials-error', 'Please enter both Access Key ID and Secret Access Key');
+        return;
+    }
+    
+    try {
+        showLoading();
+        await AWSCredentialsAPI.save({
+            accessKeyId,
+            secretAccessKey,
+            region,
+            enabled: true
+        });
+        
+        hideLoading();
+        showSuccess('aws-credentials-success', 'AWS credentials saved successfully!');
+        
+        setTimeout(() => {
+            hideAWSCredentialsForm();
+            loadAWSCredentialsStatus();
+        }, 1500);
+    } catch (error) {
+        hideLoading();
+        console.error('Error saving AWS credentials:', error);
+        showError('aws-credentials-error', 'Failed to save credentials. Please check your inputs and try again.');
+    }
+}
+
+async function deleteAWSCredentials() {
+    if (!confirm('Are you sure you want to remove your AWS credentials? This will disable automatic cost imports.')) {
+        return;
+    }
+    
+    try {
+        showLoading();
+        await AWSCredentialsAPI.delete();
+        hideLoading();
+        loadAWSCredentialsStatus();
+    } catch (error) {
+        hideLoading();
+        console.error('Error deleting AWS credentials:', error);
+        showError('aws-credentials-error', 'Failed to delete credentials');
+    }
+}
+
+async function toggleAWSCredentials(enabled) {
+    try {
+        showLoading();
+        await AWSCredentialsAPI.toggle(enabled);
+        hideLoading();
+        loadAWSCredentialsStatus();
+    } catch (error) {
+        hideLoading();
+        console.error('Error toggling AWS credentials:', error);
+        showError('aws-credentials-error', 'Failed to update credentials status');
+    }
+}
+
+async function manualImportCosts() {
+    if (!confirm('This will import AWS costs for the previous month. Continue?')) {
+        return;
+    }
+    
+    try {
+        showLoading();
+        const result = await AWSCredentialsAPI.importCosts();
+        hideLoading();
+        
+        if (result.results && result.results.length > 0) {
+            const userResult = result.results[0];
+            if (userResult.status === 'success') {
+                alert(`Successfully imported ${userResult.expensesCreated} expenses totaling $${userResult.totalAmount}`);
+                // Refresh expenses if on expenses view
+                if (state.currentView === 'expenses') {
+                    loadExpenses();
+                }
+            } else {
+                alert(`Import failed: ${userResult.error || userResult.reason}`);
+            }
+        }
+    } catch (error) {
+        hideLoading();
+        console.error('Error importing costs:', error);
+        alert('Failed to import costs. Please check your AWS credentials and try again.');
+    }
+}
+
+// Initialize Settings view
+function initializeSettingsView() {
+    const saveBtn = document.getElementById('save-aws-credentials');
+    const cancelBtn = document.getElementById('cancel-aws-credentials');
+    
+    if (saveBtn) {
+        saveBtn.addEventListener('click', saveAWSCredentials);
+    }
+    
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', hideAWSCredentialsForm);
+    }
+}
+
+// Export functions to global scope
+window.showAWSCredentialsForm = showAWSCredentialsForm;
+window.hideAWSCredentialsForm = hideAWSCredentialsForm;
+window.saveAWSCredentials = saveAWSCredentials;
+window.deleteAWSCredentials = deleteAWSCredentials;
+window.toggleAWSCredentials = toggleAWSCredentials;
+window.manualImportCosts = manualImportCosts;
+window.loadAWSCredentialsStatus = loadAWSCredentialsStatus;
 

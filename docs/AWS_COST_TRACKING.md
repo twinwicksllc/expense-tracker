@@ -124,7 +124,7 @@ Manually triggers a cost import for all users with configured credentials.
 
 ### Credential Encryption
 
-AWS Secret Access Keys are encrypted using AES-256-GCM encryption before being stored in DynamoDB. The encryption key is derived from a secure random value and stored as an environment variable in the Lambda function. This ensures that even if the database is compromised, the credentials cannot be decrypted without access to the encryption key.
+AWS Secret Access Keys are encrypted using AES-256-GCM encryption before being stored in DynamoDB. The encryption key is derived from a secure random value and stored as an environment variable in the Lambda function. The DynamoDB table itself is also encrypted at rest using an AWS owned key, providing an additional layer of security. This ensures that even if the database is compromised, the credentials cannot be decrypted without access to the encryption key.
 
 ### IAM Permissions Required
 

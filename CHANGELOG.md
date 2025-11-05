@@ -2,6 +2,19 @@
 
 All notable changes to the Expense Tracker project will be documented in this file.
 
+## [1.2.3] - 2025-11-05
+
+### Fixed
+- **Multi-Month Import**: Fixed issue where multi-month import was only processing 1 month
+  - API Gateway sends request body as base64-encoded
+  - Lambda now properly decodes base64 body before parsing JSON
+  - 12-month import now correctly imports all 12 months of expenses
+
+### Technical Details
+- Added base64 decoding logic: `Buffer.from(event.body, 'base64').toString('utf-8')`
+- Check `event.isBase64Encoded` flag before decoding
+- Improved error logging to show parse errors
+
 ## [1.2.2] - 2025-11-05
 
 ### Fixed

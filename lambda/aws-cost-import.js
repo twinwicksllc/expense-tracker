@@ -214,11 +214,16 @@ exports.handler = async (event) => {
             let months = 1;
             if (event.body) {
                 try {
-                    const body = JSON.parse(event.body);
+                    // Decode base64 if needed (API Gateway encodes body)
+                    let bodyString = event.body;
+                    if (event.isBase64Encoded) {
+                        bodyString = Buffer.from(event.body, 'base64').toString('utf-8');
+                    }
+                    const body = JSON.parse(bodyString);
                     months = parseInt(body.months) || 1;
                     console.log(`Manual import requested for ${months} month(s)`);
                 } catch (e) {
-                    console.log('Could not parse request body, defaulting to 1 month');
+                    console.log('Could not parse request body:', e.message, 'defaulting to 1 month');
                 }
             }
             

@@ -45,9 +45,28 @@ async function getUserCredentials(userId) {
     };
 }
 
+// Check if expense already exists (duplicate detection)
+async function expenseExists(userId, vendor, amount, date) {
+    const result = await docClient.send(new ScanCommand({
+        TableName: TRANSACTIONS_TABLE,
+        FilterExpression: 'userId = :userId AND vendor = :vendor AND amount = :amount AND #date = :date',
+        ExpressionAttributeNames: {
+            '#date': 'date'
+        },
+        ExpressionAttributeValues: {
+            ':userId': userId,
+            ':vendor': vendor,
+            ':amount': amount,
+            ':date': date
+        }
+    }));
+    
+    return result.Items && result.Items.length > 0;
+}
+
 // Import costs for a single user
-async function importCostsForUser(userId) {
-    console.log(`Importing costs for user: ${userId}`);
+async function importCostsForUser(userId, months = 1) {
+    console.log(`Importing costs for user: ${userId} for last ${months} month(s)`);
     
     // Get user's AWS credentials
     const credentials = await getUserCredentials(userId);
@@ -70,34 +89,39 @@ async function importCostsForUser(userId) {
         }
     });
     
-    // Get previous month's date range
-    const now = new Date();
-    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-    
-    const startDate = lastMonth.toISOString().split('T')[0];
-    const endDate = lastMonthEnd.toISOString().split('T')[0];
-    
-    console.log(`Fetching costs from ${startDate} to ${endDate}`);
-    
     try {
-        // Call Cost Explorer API
-        const costData = await ceClient.send(new GetCostAndUsageCommand({
-            TimePeriod: {
-                Start: startDate,
-                End: endDate
-            },
-            Granularity: 'MONTHLY',
-            Metrics: ['UnblendedCost'],
-            GroupBy: [
-                {
-                    Type: 'DIMENSION',
-                    Key: 'SERVICE'
-                }
-            ]
-        }));
+        const allExpenses = [];
+        let totalSkipped = 0;
+        let totalDuplicates = 0;
         
-        const expenses = [];
+        // Loop through each month
+        for (let monthOffset = 1; monthOffset <= months; monthOffset++) {
+            const now = new Date();
+            const targetMonth = new Date(now.getFullYear(), now.getMonth() - monthOffset, 1);
+            const targetMonthEnd = new Date(now.getFullYear(), now.getMonth() - monthOffset + 1, 0);
+            
+            const startDate = targetMonth.toISOString().split('T')[0];
+            const endDate = targetMonthEnd.toISOString().split('T')[0];
+            
+            console.log(`Fetching costs from ${startDate} to ${endDate}`);
+            
+            // Call Cost Explorer API
+            const costData = await ceClient.send(new GetCostAndUsageCommand({
+                TimePeriod: {
+                    Start: startDate,
+                    End: endDate
+                },
+                Granularity: 'MONTHLY',
+                Metrics: ['UnblendedCost'],
+                GroupBy: [
+                    {
+                        Type: 'DIMENSION',
+                        Key: 'SERVICE'
+                    }
+                ]
+            }));
+            
+            const expenses = [];
         
         // Process each service's cost
         for (const result of costData.ResultsByTime) {
@@ -108,6 +132,18 @@ async function importCostsForUser(userId) {
                 // Skip if amount is too small
                 if (amount < MIN_AMOUNT) {
                     console.log(`Skipping ${serviceName}: $${amount.toFixed(2)} (below minimum)`);
+                    totalSkipped++;
+                    continue;
+                }
+                
+                const vendor = `AWS - ${serviceName}`;
+                const expenseAmount = parseFloat(amount.toFixed(2));
+                
+                // Check for duplicates
+                const isDuplicate = await expenseExists(userId, vendor, expenseAmount, endDate);
+                if (isDuplicate) {
+                    console.log(`Skipping duplicate: ${serviceName} - $${expenseAmount} for ${endDate}`);
+                    totalDuplicates++;
                     continue;
                 }
                 
@@ -116,11 +152,11 @@ async function importCostsForUser(userId) {
                 const expense = {
                     userId,
                     transactionId,
-                    vendor: `AWS - ${serviceName}`,
-                    amount: parseFloat(amount.toFixed(2)),
+                    vendor,
+                    amount: expenseAmount,
                     date: endDate,
                     category: 'Software',
-                    description: `AWS ${serviceName} charges for ${lastMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}`,
+                    description: `AWS ${serviceName} charges for ${targetMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}`,
                     uploadDate: now,
                     createdAt: now,
                     updatedAt: now,
@@ -134,17 +170,22 @@ async function importCostsForUser(userId) {
                 }));
                 
                 expenses.push(expense);
-                console.log(`Added expense: ${serviceName} - $${amount.toFixed(2)}`);
+                console.log(`Added expense: ${serviceName} - $${expenseAmount}`);
             }
         }
         
-        const totalCost = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+        allExpenses.push(...expenses);
+        }
+        
+        const totalCost = allExpenses.reduce((sum, exp) => sum + exp.amount, 0);
         
         return {
             userId,
             status: 'success',
-            period: `${startDate} to ${endDate}`,
-            expensesCreated: expenses.length,
+            monthsProcessed: months,
+            expensesCreated: allExpenses.length,
+            duplicatesSkipped: totalDuplicates,
+            belowMinimumSkipped: totalSkipped,
             totalAmount: totalCost.toFixed(2)
         };
         
@@ -168,7 +209,20 @@ exports.handler = async (event) => {
         // Check if this is a manual trigger for a specific user (API Gateway)
         if (event.requestContext && event.requestContext.authorizer) {
             const userId = event.requestContext.authorizer.claims.sub;
-            const result = await importCostsForUser(userId);
+            
+            // Parse months from request body (default to 1)
+            let months = 1;
+            if (event.body) {
+                try {
+                    const body = JSON.parse(event.body);
+                    months = parseInt(body.months) || 1;
+                    console.log(`Manual import requested for ${months} month(s)`);
+                } catch (e) {
+                    console.log('Could not parse request body, defaulting to 1 month');
+                }
+            }
+            
+            const result = await importCostsForUser(userId, months);
             results.push(result);
         } else {
             // Scheduled trigger (EventBridge) - import for all users

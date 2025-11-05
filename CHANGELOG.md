@@ -2,6 +2,36 @@
 
 All notable changes to the Expense Tracker project will be documented in this file.
 
+## [1.2.0] - 2025-11-05
+
+### Added
+- **Multi-Month Import**: Users can now import AWS costs for 1, 2, 3, 6, or 12 months at once
+- **Duplicate Detection**: Automatic detection and skipping of duplicate expenses during import
+- **Expanded Region Support**: Added all AWS regions (32 total) to the region dropdown, organized by geographic area
+  - North America: 8 regions
+  - South America: 1 region
+  - Europe: 8 regions
+  - Middle East: 3 regions
+  - Africa: 1 region
+  - Asia Pacific: 11 regions
+- **Enhanced Import Feedback**: Import results now show number of duplicates skipped and expenses below minimum threshold
+
+### Changed
+- Updated `aws-cost-import` Lambda function to accept `months` parameter in request body
+- Modified frontend to include month selector dropdown in AWS Cost Tracking settings
+- Improved import confirmation messages with detailed statistics (expenses created, duplicates skipped, total amount)
+- Updated region dropdown from 4 regions to 32 regions for better user experience
+
+### Technical Details
+- Lambda function now loops through multiple months when importing costs
+- Each expense is checked against existing DynamoDB records before creation using `expenseExists()` function
+- Duplicate detection uses userId, vendor, amount, and date as matching criteria
+- Import response includes: `monthsProcessed`, `expensesCreated`, `duplicatesSkipped`, `belowMinimumSkipped`, `totalAmount`
+- DynamoDB Scan operation used for duplicate detection (optimized for accuracy over speed)
+
+### Documentation
+- Added `docs/MULTI_MONTH_IMPORT.md` - Comprehensive guide for multi-month import feature
+
 ## [1.1.1] - 2025-11-05
 
 ### Fixed

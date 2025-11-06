@@ -20,8 +20,10 @@ This application helps freelancers and small businesses track expenses, parse re
 ```
 expense-tracker-repo/
 ├── frontend/           # Frontend application files
-│   ├── index.html     # Main HTML file with inline CSS
-│   └── app.js         # JavaScript application code
+│   ├── index.html     # Main HTML file
+│   ├── app.js         # JavaScript application code
+│   ├── styles.css     # Main stylesheet
+│   └── settings-styles.css  # Settings page styles
 ├── lambda/            # AWS Lambda functions
 │   ├── projects.js    # Project management Lambda
 │   ├── expenses.js    # Expense management Lambda
@@ -39,7 +41,12 @@ expense-tracker-repo/
 - Expense CRUD operations
 - Receipt upload and storage
 - AI-powered receipt parsing
-- Dashboard with expense summaries
+- **Enhanced Dashboard** with:
+  - Time period toggle (YTD / Current Month / Last Month)
+  - Monthly spending trends chart (stacked columns)
+  - Chart grouping options (by Vendor, Category, or Project)
+  - Period-over-period comparison metrics
+  - Interactive Chart.js visualizations
 - Category-based expense tracking
 - Project management (CRUD)
 - Expense-to-project assignment

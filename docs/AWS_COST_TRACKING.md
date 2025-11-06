@@ -193,6 +193,19 @@ If the cost import fails, ensure that the AWS credentials are valid and have not
 
 If the import succeeds but no expenses are created, this may indicate that there were no AWS costs for the previous month, or that the costs were below the minimum threshold. Check the Lambda function logs to see the cost data retrieved from the Cost Explorer API.
 
+### Expenses Not Appearing in App (Fixed as of November 2025)
+
+**Issue**: AWS expenses were successfully imported to DynamoDB but did not appear in the Expenses tab or Dashboard.
+
+**Root Cause**: The `aws-cost-import` Lambda function was missing the `uploadDate` field when creating expense records. The `getExpenses` function queries using a Global Secondary Index (`userId-uploadDate-index`) that requires this field, causing expenses without it to be invisible to the app.
+
+**Resolution**: Updated the Lambda function to include the `uploadDate` field (set to current timestamp) for all imported expenses. All expense records now include:
+- `uploadDate`: ISO timestamp when expense was created
+- `createdAt`: ISO timestamp when expense was created
+- `updatedAt`: ISO timestamp when expense was last modified
+
+**Deployment**: Fixed in Lambda deployment on November 5, 2025. If you experience this issue, verify that your Lambda function includes the `uploadDate` field in the expense object before writing to DynamoDB.
+
 ## Maintenance
 
 ### Updating Credentials

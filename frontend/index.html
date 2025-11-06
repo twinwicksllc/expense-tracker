@@ -9,6 +9,7 @@
     <link rel="apple-touch-icon" href="favicon.png">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="settings-styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <div id="app">
@@ -113,22 +114,47 @@
                 <div class="container">
                     <h2>Expense Dashboard</h2>
                     
+                    <!-- Time Period Toggle -->
+                    <div class="time-period-toggle" style="margin-bottom: 24px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                        <button class="period-btn active" data-period="ytd">Year to Date</button>
+                        <button class="period-btn" data-period="current_month">Current Month</button>
+                        <button class="period-btn" data-period="last_month">Last Month</button>
+                    </div>
+                    
+                    <!-- Stats Grid with Comparison -->
                     <div class="stats-grid">
                         <div class="stat-card">
                             <h3>Total Expenses</h3>
                             <p class="stat-value" id="total-expenses">$0.00</p>
+                            <p class="stat-change" id="total-change"></p>
                         </div>
                         <div class="stat-card">
                             <h3>This Month</h3>
                             <p class="stat-value" id="month-expenses">$0.00</p>
+                            <p class="stat-change" id="month-change"></p>
                         </div>
                         <div class="stat-card">
                             <h3>Transaction Count</h3>
                             <p class="stat-value" id="transaction-count">0</p>
+                            <p class="stat-change" id="count-change"></p>
                         </div>
                     </div>
 
-                    <div class="chart-container">
+                    <!-- Monthly Trend Chart -->
+                    <div class="chart-container" style="margin-top: 32px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                            <h3 style="margin: 0;">Monthly Spending Trends</h3>
+                            <div class="chart-grouping-toggle" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <button class="grouping-btn active" data-grouping="vendor">By Vendor</button>
+                                <button class="grouping-btn" data-grouping="category">By Category</button>
+                                <button class="grouping-btn" data-grouping="project">By Project</button>
+                            </div>
+                        </div>
+                        <canvas id="monthly-chart" style="max-height: 400px;"></canvas>
+                    </div>
+
+                    <!-- Category Breakdown Chart -->
+                    <div class="chart-container" style="margin-top: 32px;">
                         <h3>Expenses by Category</h3>
                         <div id="category-chart" class="category-chart"></div>
                     </div>

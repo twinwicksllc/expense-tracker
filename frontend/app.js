@@ -309,8 +309,9 @@ async function deleteExpense(transactionId) {
     });
 }
 
-async function getDashboardData() {
-    return await apiRequest('/dashboard/summary');
+async function getDashboardData(period = 'ytd', groupBy = 'vendor') {
+    const params = new URLSearchParams({ period, groupBy });
+    return await apiRequest(`/dashboard/summary?${params}`);
 }
 
 // UI Functions
@@ -354,41 +355,219 @@ function switchView(viewName) {
     }
 }
 
+// Dashboard state
+const dashboardState = {
+    currentPeriod: 'ytd',
+    currentGrouping: 'vendor',
+    monthlyChart: null
+};
+
 async function loadDashboard() {
     try {
         showLoading();
+        
+        // Load dashboard data with current period and grouping
+        const dashboardData = await getDashboardData(
+            dashboardState.currentPeriod,
+            dashboardState.currentGrouping
+        );
+        
+        // Update stats with comparison
+        updateDashboardStats(dashboardData);
+        
+        // Render monthly trend chart
+        renderMonthlyChart(dashboardData.monthlyData);
+        
+        // Load all expenses for category chart
         const expenses = await getExpenses();
         state.expenses = expenses;
-
-        // Calculate statistics
-        const total = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
-        const monthTotal = expenses
-            .filter(exp => {
-                const date = new Date(exp.transactionDate);
-                return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-            })
-            .reduce((sum, exp) => sum + exp.amount, 0);
-
-        // Update stats
-        document.getElementById('total-expenses').textContent = formatCurrency(total);
-        document.getElementById('month-expenses').textContent = formatCurrency(monthTotal);
-        document.getElementById('transaction-count').textContent = expenses.length;
-
+        
         // Calculate category totals
         const categoryTotals = {};
         expenses.forEach(exp => {
             categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + exp.amount;
         });
-
+        
         // Render category chart
         renderCategoryChart(categoryTotals);
+        
     } catch (error) {
         console.error('Failed to load dashboard:', error);
     } finally {
-        showLoading(false);
+        hideLoading();
     }
+}
+
+// Update dashboard stats with comparison
+function updateDashboardStats(data) {
+    // Update total expenses
+    document.getElementById('total-expenses').textContent = formatCurrency(data.totalExpenses || 0);
+    updateChangeIndicator('total-change', data.comparison?.totalChange);
+    
+    // Update month expenses
+    document.getElementById('month-expenses').textContent = formatCurrency(data.currentMonthTotal || 0);
+    updateChangeIndicator('month-change', data.comparison?.monthChange);
+    
+    // Update transaction count
+    document.getElementById('transaction-count').textContent = data.transactionCount || 0;
+    updateChangeIndicator('count-change', data.comparison?.countChange);
+}
+
+// Update change indicator with percentage
+function updateChangeIndicator(elementId, changePercent) {
+    const element = document.getElementById(elementId);
+    if (!element || changePercent === undefined || changePercent === null) {
+        if (element) element.textContent = '';
+        return;
+    }
+    
+    const absChange = Math.abs(changePercent);
+    const sign = changePercent > 0 ? '+' : changePercent < 0 ? '-' : '';
+    const arrow = changePercent > 0 ? '↑' : changePercent < 0 ? '↓' : '';
+    
+    element.textContent = `${arrow} ${sign}${absChange.toFixed(1)}% vs previous period`;
+    element.className = 'stat-change';
+    
+    if (changePercent > 0) {
+        element.classList.add('positive');
+    } else if (changePercent < 0) {
+        element.classList.add('negative');
+    } else {
+        element.classList.add('neutral');
+    }
+}
+
+// Render monthly trend chart with stacked columns
+function renderMonthlyChart(monthlyData) {
+    const canvas = document.getElementById('monthly-chart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Destroy existing chart if it exists
+    if (dashboardState.monthlyChart) {
+        dashboardState.monthlyChart.destroy();
+    }
+    
+    if (!monthlyData || monthlyData.length === 0) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = '16px sans-serif';
+        ctx.fillStyle = '#6b7280';
+        ctx.textAlign = 'center';
+        ctx.fillText('No data available for this period', canvas.width / 2, canvas.height / 2);
+        return;
+    }
+    
+    // Extract labels (months) and datasets
+    const labels = monthlyData.map(item => item.month);
+    const groupKeys = new Set();
+    
+    // Collect all unique group keys
+    monthlyData.forEach(item => {
+        Object.keys(item.breakdown).forEach(key => groupKeys.add(key));
+    });
+    
+    // Generate color palette
+    const colors = generateColorPalette(groupKeys.size);
+    
+    // Create datasets for each group
+    const datasets = Array.from(groupKeys).map((key, index) => ({
+        label: key,
+        data: monthlyData.map(item => item.breakdown[key] || 0),
+        backgroundColor: colors[index],
+        borderColor: colors[index],
+        borderWidth: 1
+    }));
+    
+    // Create the chart
+    dashboardState.monthlyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                title: {
+                    display: false
+                },
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 12,
+                        padding: 10,
+                        font: {
+                            size: 12
+                        }
+                    }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            label += formatCurrency(context.parsed.y);
+                            return label;
+                        },
+                        footer: function(tooltipItems) {
+                            let sum = 0;
+                            tooltipItems.forEach(item => {
+                                sum += item.parsed.y;
+                            });
+                            return 'Total: ' + formatCurrency(sum);
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    grid: {
+                        display: false
+                    }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Generate color palette for chart
+function generateColorPalette(count) {
+    const baseColors = [
+        '#3b82f6', // blue
+        '#10b981', // green
+        '#f59e0b', // amber
+        '#ef4444', // red
+        '#8b5cf6', // purple
+        '#ec4899', // pink
+        '#06b6d4', // cyan
+        '#84cc16', // lime
+        '#f97316', // orange
+        '#6366f1'  // indigo
+    ];
+    
+    const colors = [];
+    for (let i = 0; i < count; i++) {
+        colors.push(baseColors[i % baseColors.length]);
+    }
+    
+    return colors;
 }
 
 function renderCategoryChart(categoryTotals) {
@@ -1510,4 +1689,45 @@ function displayIAMARN(arn) {
 // Export new functions
 window.getIAMUserARN = getIAMUserARN;
 window.displayIAMARN = displayIAMARN;
+
+
+
+// Initialize dashboard controls
+function initializeDashboardControls() {
+    // Time period toggle
+    document.querySelectorAll('.period-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            // Update active state
+            document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            
+            // Update state and reload
+            dashboardState.currentPeriod = e.target.dataset.period;
+            await loadDashboard();
+        });
+    });
+    
+    // Chart grouping toggle
+    document.querySelectorAll('.grouping-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            // Update active state
+            document.querySelectorAll('.grouping-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            
+            // Update state and reload
+            dashboardState.currentGrouping = e.target.dataset.grouping;
+            await loadDashboard();
+        });
+    });
+}
+
+// Initialize dashboard controls when dashboard view is shown
+const originalSwitchView = switchView;
+switchView = function(viewName) {
+    originalSwitchView(viewName);
+    if (viewName === 'dashboard') {
+        // Initialize controls after a short delay to ensure DOM is ready
+        setTimeout(initializeDashboardControls, 100);
+    }
+};
 

@@ -2,6 +2,30 @@
 
 All notable changes to the Expense Tracker project will be documented in this file.
 
+## [1.3.0] - 2025-11-06
+
+### Added
+- **Enhanced Dashboard**: Time period toggle for YTD, Current Month, and Last Month views
+- **Monthly Spending Trends Chart**: Stacked column chart showing spending over time
+- **Chart Grouping Options**: View monthly data grouped by Vendor, Category, or Project
+- **Comparison Metrics**: Period-over-period change indicators with percentage and arrows
+- **Chart.js Integration**: Professional charting library for interactive visualizations
+- **Responsive Design**: Mobile-friendly dashboard controls and charts
+
+### Changed
+- Enhanced getDashboard Lambda function with monthly aggregation logic
+- Added support for three grouping modes: vendor, category, project
+- Implemented time period filtering with comparison calculations
+- Updated frontend with new UI components and Chart.js integration
+- Created comprehensive styles.css for consistent design system
+
+### Technical Details
+- Backend: Enhanced dashboard.js Lambda with query parameters (period, groupBy)
+- Frontend: Added Chart.js 4.4.0 from CDN
+- Dashboard state management for current period and grouping selection
+- Color palette generation for dynamic chart datasets
+- CloudFront cache invalidation for immediate deployment
+
 ## [1.2.4] - 2025-11-05
 
 ### Fixed

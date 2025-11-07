@@ -2,6 +2,26 @@
 
 All notable changes to the Expense Tracker project will be documented in this file.
 
+## [1.3.1] - 2025-11-06
+
+### Fixed
+- **CRITICAL:** Fixed CORS issue blocking AWS credentials save operation
+  - OPTIONS preflight requests to `/aws-credentials` endpoint were returning 500 error
+  - Modified Lambda function to handle OPTIONS requests directly with proper CORS headers
+  - Configured API Gateway OPTIONS method with AWS_PROXY integration to Lambda
+  - Users can now successfully save AWS IAM credentials for cost tracking
+
+### Changed
+- Made Twin Wicks logo clickable on all pages, linking to https://twin-wicks.com
+  - Added anchor tags around logo images on login/signup and main header
+  - Links open in new tab with security attributes (target="_blank" rel="noopener noreferrer")
+
+### Technical Details
+- Lambda: Added OPTIONS handler in aws-credentials.js returning 200 with CORS headers
+- API Gateway: Configured OPTIONS method with Lambda integration and permissions
+- Frontend: Wrapped logo images in anchor tags in index.html
+- Deployment: Updated Lambda code, created API Gateway deployment, synced S3, invalidated CloudFront
+
 ## [1.3.0] - 2025-11-06
 
 ### Added

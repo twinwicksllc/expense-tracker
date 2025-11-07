@@ -384,6 +384,15 @@ async function loadDashboard() {
 
         // Render category chart
         renderCategoryChart(categoryTotals);
+        
+        // Initialize chart controls and load monthly chart
+        if (window.dashboardEnhanced && typeof window.dashboardEnhanced.initializeChartControls === 'function') {
+            window.dashboardEnhanced.initializeChartControls();
+        }
+        
+        if (window.dashboardEnhanced && typeof window.dashboardEnhanced.updateMonthlyChart === 'function') {
+            await window.dashboardEnhanced.updateMonthlyChart();
+        }
     } catch (error) {
         console.error('Failed to load dashboard:', error);
     } finally {
@@ -1243,13 +1252,14 @@ const AWSCredentialsAPI = {
         return response.json();
     },
     
-    async importCosts() {
+    async importCosts(months = 1) {
         const response = await fetch(`${CONFIG.API_BASE_URL}/aws-cost-import`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('idToken')}`,
                 'Content-Type': 'application/json'
-            }
+            },
+            body: JSON.stringify({ months })
         });
         if (!response.ok) throw new Error('Failed to import costs');
         return response.json();
@@ -1287,10 +1297,22 @@ async function loadAWSCredentialsStatus() {
                         ${status.enabled ? '<p class="info-text">✓ AWS costs will be automatically imported monthly</p>' : '<p class="warning-text">⚠ Automatic import is disabled</p>'}
                     </div>
                     <div class="manual-import">
-                        <button class="btn btn-primary" onclick="manualImportCosts()">
-                            Import Costs Now
-                        </button>
-                        <small>Manually trigger cost import for the previous month</small>
+                        <div class="import-controls">
+                            <div class="form-group" style="margin-bottom: 10px;">
+                                <label for="import-months">Number of Months to Import</label>
+                                <select id="import-months" class="import-month-select">
+                                    <option value="1">Last 1 month</option>
+                                    <option value="2">Last 2 months</option>
+                                    <option value="3">Last 3 months</option>
+                                    <option value="6">Last 6 months</option>
+                                    <option value="12">Last 12 months</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-primary" onclick="manualImportCosts()">
+                                Import AWS Costs
+                            </button>
+                        </div>
+                        <small>Import AWS costs with automatic duplicate detection</small>
                     </div>
                 </div>
             `;
@@ -1306,7 +1328,15 @@ async function loadAWSCredentialsStatus() {
         }
     } catch (error) {
         console.error('Error loading AWS credentials status:', error);
-        showError('aws-credentials-error', 'Failed to load credentials status');
+        const statusContainer = document.getElementById('aws-credentials-status');
+        statusContainer.innerHTML = `
+            <div class="credential-not-configured">
+                <p>No AWS credentials configured</p>
+                <button class="btn btn-primary" onclick="showAWSCredentialsForm()">
+                    + Add AWS Credentials
+                </button>
+            </div>
+        `;
     }
 }
 
@@ -1344,6 +1374,16 @@ async function saveAWSCredentials() {
         
         hideLoading();
         showSuccess('aws-credentials-success', 'AWS credentials saved successfully!');
+        
+        // Retrieve and display IAM ARN
+        try {
+            const arn = await getIAMUserARN(accessKeyId, secretAccessKey, region);
+            if (arn) {
+                displayIAMARN(arn);
+            }
+        } catch (error) {
+            console.error('Could not retrieve IAM ARN:', error);
+        }
         
         setTimeout(() => {
             hideAWSCredentialsForm();
@@ -1387,19 +1427,33 @@ async function toggleAWSCredentials(enabled) {
 }
 
 async function manualImportCosts() {
-    if (!confirm('This will import AWS costs for the previous month. Continue?')) {
+    const monthsSelect = document.getElementById('import-months');
+    const months = monthsSelect ? parseInt(monthsSelect.value) : 1;
+    
+    const confirmMsg = months === 1 
+        ? 'This will import AWS costs for the previous month. Continue?'
+        : `This will import AWS costs for the last ${months} months with automatic duplicate detection. Continue?`;
+    
+    if (!confirm(confirmMsg)) {
         return;
     }
     
     try {
         showLoading();
-        const result = await AWSCredentialsAPI.importCosts();
+        const result = await AWSCredentialsAPI.importCosts(months);
         hideLoading();
         
         if (result.results && result.results.length > 0) {
             const userResult = result.results[0];
             if (userResult.status === 'success') {
-                alert(`Successfully imported ${userResult.expensesCreated} expenses totaling $${userResult.totalAmount}`);
+                let message = `Successfully imported ${userResult.expensesCreated} expenses totaling $${userResult.totalAmount}`;
+                if (userResult.duplicatesSkipped > 0) {
+                    message += `\n${userResult.duplicatesSkipped} duplicate(s) skipped`;
+                }
+                if (userResult.belowMinimumSkipped > 0) {
+                    message += `\n${userResult.belowMinimumSkipped} below minimum threshold`;
+                }
+                alert(message);
                 // Refresh expenses if on expenses view
                 if (state.currentView === 'expenses') {
                     loadExpenses();
@@ -1437,4 +1491,67 @@ window.deleteAWSCredentials = deleteAWSCredentials;
 window.toggleAWSCredentials = toggleAWSCredentials;
 window.manualImportCosts = manualImportCosts;
 window.loadAWSCredentialsStatus = loadAWSCredentialsStatus;
+
+
+
+
+// ==================== IAM ARN HELPER FUNCTIONS ====================
+
+async function getIAMUserARN(accessKeyId, secretAccessKey, region) {
+    // Call AWS STS GetCallerIdentity to retrieve the IAM user ARN
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/aws-get-caller-identity`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('idToken')}`
+            },
+            body: JSON.stringify({
+                accessKeyId,
+                secretAccessKey,
+                region
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to retrieve IAM ARN');
+        }
+        
+        const data = await response.json();
+        return data.arn;
+    } catch (error) {
+        console.error('Error retrieving IAM ARN:', error);
+        return null;
+    }
+}
+
+function displayIAMARN(arn) {
+    const arnDisplay = document.getElementById('iam-arn-display');
+    const arnValue = document.getElementById('iam-arn-value');
+    const copyBtn = document.getElementById('copy-arn');
+    
+    if (arnDisplay && arnValue) {
+        arnValue.textContent = arn;
+        arnDisplay.style.display = 'block';
+        
+        // Add copy functionality
+        if (copyBtn) {
+            copyBtn.onclick = () => {
+                navigator.clipboard.writeText(arn).then(() => {
+                    const originalText = copyBtn.textContent;
+                    copyBtn.textContent = '✓ Copied!';
+                    setTimeout(() => {
+                        copyBtn.textContent = originalText;
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy ARN:', err);
+                });
+            };
+        }
+    }
+}
+
+// Export new functions
+window.getIAMUserARN = getIAMUserARN;
+window.displayIAMARN = displayIAMARN;
 

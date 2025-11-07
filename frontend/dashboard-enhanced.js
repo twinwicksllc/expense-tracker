@@ -269,14 +269,18 @@ function renderMonthlyChart(monthlyData, groupKeys) {
  * Generate colors for chart
  */
 function generateColors(count) {
-    // Brand color (#1f2937) and variations
+    // Option 3: Balanced Spectrum - Professional color palette
     const baseColors = [
-        '#1f2937',  // Dark gray (primary)
-        '#374151',  // Medium gray
-        '#4b5563',  // Light gray
-        '#6b7280',  // Lighter gray
-        '#9ca3af',  // Very light gray
-        '#d1d5db'   // Lightest gray
+        '#2563eb',  // Primary Blue
+        '#10b981',  // Green
+        '#f97316',  // Orange
+        '#a855f7',  // Purple
+        '#06b6d4',  // Cyan
+        '#ef4444',  // Red
+        '#eab308',  // Yellow
+        '#14b8a6',  // Teal
+        '#8b5cf6',  // Violet
+        '#f43f5e'   // Rose
     ];
 
     // If we need more colors, generate variations

@@ -29,3 +29,4 @@ npm-debug.log*
 *.tmp
 *.temp
 
+docs/google-oauth-config.md

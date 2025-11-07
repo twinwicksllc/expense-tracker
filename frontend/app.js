@@ -4,7 +4,10 @@ const CONFIG = {
     COGNITO: {
         USER_POOL_ID: 'us-east-1_7H7R5DVZT',
         CLIENT_ID: 'pk3l1fkkre0ms4si0prabfavl',
-        REGION: 'us-east-1'
+        REGION: 'us-east-1',
+        DOMAIN: 'https://expense-tracker-prod.auth.us-east-1.amazoncognito.com',
+        REDIRECT_URI: 'https://app.twin-wicks.com/callback',
+        SIGN_OUT_URI: 'https://app.twin-wicks.com'
     }
 };
 
@@ -617,10 +620,19 @@ async function confirmDeleteExpense(transactionId) {
 }
 
 // Event Listeners
-document.addEventListener('DOMContentLoaded', () => {
-    // Check authentication on load
-    if (!checkAuth()) {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Check if this is an OAuth callback
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('code') || urlParams.has('error')) {
+        await handleOAuthCallback();
+        return;
+    }
+    
+    // Check authentication on load (supports both email/password and OAuth)
+    if (!checkAuth() && !checkOAuthAuth()) {
         showAuthScreen();
+    } else {
+        showMainScreen();
     }
 
     // Auth tab switching
@@ -711,8 +723,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Logout
-    document.getElementById('logout-btn').addEventListener('click', logout);
+    // Logout (supports both email/password and OAuth)
+    document.getElementById('logout-btn').addEventListener('click', logoutWithOAuth);
 
     // Navigation
     document.querySelectorAll('.nav-btn').forEach(btn => {

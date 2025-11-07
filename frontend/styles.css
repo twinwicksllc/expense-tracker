@@ -970,3 +970,58 @@ body {
     }
 }
 
+
+/* Google OAuth Button Styles */
+.btn-google {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px;
+    background: white;
+    color: #3c4043;
+    border: 1px solid #dadce0;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 16px;
+}
+
+.btn-google:hover {
+    background: #f8f9fa;
+    border-color: #c6c6c6;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.btn-google:active {
+    background: #f1f3f4;
+}
+
+.btn-google svg {
+    flex-shrink: 0;
+}
+
+/* Auth Divider */
+.auth-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 24px 0 8px 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #dadce0;
+}
+
+.auth-divider span {
+    padding: 0 16px;
+    color: #5f6368;
+    font-size: 13px;
+    font-weight: 500;
+}

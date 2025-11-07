@@ -2,6 +2,34 @@
 
 All notable changes to the Expense Tracker project will be documented in this file.
 
+## [1.5.0] - 2025-11-07
+
+### Added
+- **Google OAuth Sign-In**: Users can now sign in using their Google account
+  - "Sign in with Google" button added to login page
+  - Seamless authentication via AWS Cognito Hosted UI
+  - Supports both email/password and Google OAuth authentication methods
+  - OAuth flow implemented with authorization code grant for security
+
+### Changed
+- Enhanced authentication system to support multiple sign-in methods
+- Updated logout functionality to handle both Cognito and federated users
+- Improved session management with support for OAuth tokens
+
+### Technical Details
+- Frontend: Created oauth.js module for OAuth flow handling
+- Frontend: Added Google sign-in button with Google branding guidelines
+- Frontend: Implemented OAuth callback handler for authorization code exchange
+- Frontend: Updated app.js to support both authentication methods
+- Frontend: Added auth divider and Google button styling to styles.css
+- Configuration: Added Cognito domain and OAuth redirect URIs to CONFIG
+- AWS: Configured Google as identity provider in Cognito User Pool
+- AWS: Configured app client OAuth settings with callback URLs
+
+### Known Limitations
+- Account linking between email/password and Google accounts not yet implemented
+- Will be added in future update via Pre-Authentication Lambda trigger
+
 ## [1.3.1] - 2025-11-06
 
 ### Fixed

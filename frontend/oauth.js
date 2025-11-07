@@ -157,15 +157,18 @@ async function refreshAccessToken() {
  * Signs out user from Cognito (works for both email/password and OAuth)
  */
 function signOut() {
+    // Check auth provider BEFORE clearing localStorage
     const authProvider = localStorage.getItem('authProvider');
     
     // Clear local state
     state.user = null;
     state.idToken = null;
-    localStorage.clear();
-
+    
     // If user signed in with Google, use Cognito hosted UI logout
     if (authProvider === 'Google') {
+        // Clear storage before redirect
+        localStorage.clear();
+        
         const params = new URLSearchParams({
             client_id: CONFIG.COGNITO.CLIENT_ID,
             logout_uri: CONFIG.COGNITO.SIGN_OUT_URI
@@ -174,7 +177,8 @@ function signOut() {
         const logoutUrl = `${CONFIG.COGNITO.DOMAIN}/logout?${params.toString()}`;
         window.location.href = logoutUrl;
     } else {
-        // For email/password, just show auth screen
+        // For email/password, clear storage and show auth screen
+        localStorage.clear();
         showAuthScreen();
     }
 }

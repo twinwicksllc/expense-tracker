@@ -2,6 +2,46 @@
 
 All notable changes to the Expense Tracker project will be documented in this file.
 
+## [1.6.1] - 2025-11-08
+
+### Added
+- **Manual Account Linking**: Settings page with "Link Google Account" feature
+  - Users can manually link their Google account from settings page
+  - OAuth flow with CSRF protection using state parameter
+  - Real-time linking status display
+  - Secure token exchange via backend Lambda function
+  - Email verification enforcement before linking
+
+### Changed
+- Replaced automatic Pre-Signup linking with manual user-initiated linking
+- Improved OAuth security with state parameter validation
+- Enhanced frontend JWT handling with expiry checks
+- Added authorization code format validation
+
+### Technical Details
+- **Frontend**: Created settings.html page for account management
+- **Frontend**: Implemented settings.js with OAuth flow and CSRF protection
+- **Frontend**: Added JWT expiry checking before API calls
+- **Frontend**: OAuth state parameter generation and validation
+- **Frontend**: Authorization code format validation (regex)
+- **Backend**: Created link-account Lambda function for manual linking
+- **Backend**: Token exchange with Cognito OAuth endpoint
+- **Backend**: AdminLinkProviderForUser API integration
+- **Backend**: Email verification checks for both accounts
+- **Backend**: Comprehensive error handling and user feedback
+- **API Gateway**: Added POST /link-account endpoint
+- **API Gateway**: CORS configuration for settings page
+- **Security**: Perplexity AI review completed for both backend and frontend
+- **Security**: CSRF protection via OAuth state parameter
+- **Security**: Token expiry validation on frontend
+- **Security**: Authorization code format validation
+- **Code Quality**: All code reviewed and validated by Perplexity AI
+
+### Fixed
+- Resolved OAuth callback errors with immutable email attribute
+- Fixed duplicate account creation issues
+- Improved error messages for better user experience
+
 ## [1.6.0] - 2025-11-07
 
 ### Added

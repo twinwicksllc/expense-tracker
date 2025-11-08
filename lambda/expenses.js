@@ -3,6 +3,7 @@ JavaScript File: lambda_expenses.js
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, PutCommand, QueryCommand, GetCommand, UpdateCommand, DeleteCommand } = require('@aws-sdk/lib-dynamodb');
 const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { CognitoIdentityProviderClient, AdminGetUserCommand } = require('@aws-sdk/client-cognito-identity-provider');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { v4: uuidv4 } = require('uuid');
 const multipart = require('lambda-multipart-parser');
@@ -10,6 +11,7 @@ const multipart = require('lambda-multipart-parser');
 const dynamoClient = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
 const s3Client = new S3Client({});
+const cognitoClient = new CognitoIdentityProviderClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
 const TRANSACTIONS_TABLE = process.env.TRANSACTIONS_TABLE;
 const RECEIPTS_BUCKET = process.env.RECEIPTS_BUCKET;
@@ -108,11 +110,47 @@ function sanitizeString(str, maxLength = 1000) {
 }
 
 /**
- * Get user ID from Cognito authorizer context
+ * Get primary user ID from Cognito authorizer context
+ * Handles both direct (email/password) and federated (Google OAuth) logins
+ * For federated logins, resolves to the primary linked account's sub
  */
-function getUserId(event) {
-    return event.requestContext.authorizer?.claims?.sub || 
-           event.requestContext.authorizer?.principalId;
+async function getUserId(event) {
+    const claims = event.requestContext?.authorizer?.claims;
+    if (!claims) {
+        return null;
+    }
+    
+    // Check if this is a federated login (has identities claim)
+    if (claims.identities) {
+        try {
+            // Parse identities to get the federated userId
+            const identities = JSON.parse(claims.identities);
+            if (identities && identities.length > 0) {
+                const federatedUserId = identities[0].userId;
+                
+                // Query Cognito to get the primary user's details
+                const command = new AdminGetUserCommand({
+                    UserPoolId: process.env.USER_POOL_ID,
+                    Username: federatedUserId
+                });
+                
+                const user = await cognitoClient.send(command);
+                
+                // Find the primary user's sub attribute
+                const subAttr = user.UserAttributes?.find(attr => attr.Name === 'sub');
+                if (subAttr) {
+                    console.log(`Resolved federated user ${federatedUserId} to primary user ${subAttr.Value}`);
+                    return subAttr.Value;
+                }
+            }
+        } catch (error) {
+            console.error('Error resolving federated identity:', error);
+            // Fall back to using the sub from claims
+        }
+    }
+    
+    // For direct logins or if resolution fails, use sub directly
+    return claims.sub || event.requestContext.authorizer?.principalId;
 }
 
 /**
@@ -120,7 +158,7 @@ function getUserId(event) {
  */
 exports.createExpense = async (event) => {
     try {
-        const userId = getUserId(event);
+        const userId = await getUserId(event);
         if (!userId) {
             return {
                 statusCode: 401,
@@ -244,10 +282,9 @@ exports.createExpense = async (event) => {
 
 /**
  * Get all expenses for user
- */
-exports.getExpenses = async (event) => {
+ */exports.listExpenses = async (event) => {
     try {
-        const userId = getUserId(event);
+        const userId = await getUserId(event);
         if (!userId) {
             return {
                 statusCode: 401,
@@ -332,11 +369,9 @@ exports.getExpenses = async (event) => {
 
 /**
  * Get single expense
- */
-exports.getExpense = async (event) => {
+ *exports.deleteExpense = async (event) => {
     try {
-        const userId = getUserId(event);
-        if (!userId) {
+        const userId = await getUserId(event);        if (!userId) {
             return {
                 statusCode: 401,
                 headers: {
@@ -402,7 +437,7 @@ exports.getExpense = async (event) => {
  */
 exports.updateExpense = async (event) => {
     try {
-        const userId = getUserId(event);
+        const userId = await getUserId(event);
         if (!userId) {
             return {
                 statusCode: 401,

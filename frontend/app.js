@@ -318,14 +318,23 @@ async function getDashboardData() {
 
 // UI Functions
 function showAuthScreen() {
-    document.getElementById('auth-screen').style.display = 'block';
-    document.getElementById('main-screen').style.display = 'none';
+    const authScreen = document.getElementById('auth-screen');
+    const mainScreen = document.getElementById('main-screen');
+    
+    if (authScreen) authScreen.style.display = 'block';
+    if (mainScreen) mainScreen.style.display = 'none';
 }
 
 function showMainScreen() {
-    document.getElementById('auth-screen').style.display = 'none';
-    document.getElementById('main-screen').style.display = 'block';
-    document.getElementById('user-email').textContent = state.user.email;
+    const authScreen = document.getElementById('auth-screen');
+    const mainScreen = document.getElementById('main-screen');
+    const userEmail = document.getElementById('user-email');
+    
+    if (authScreen) authScreen.style.display = 'none';
+    if (mainScreen) mainScreen.style.display = 'block';
+    if (userEmail && state.user && state.user.email) {
+        userEmail.textContent = state.user.email;
+    }
     loadDashboard();
 }
 

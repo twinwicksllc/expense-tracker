@@ -86,7 +86,10 @@ function showSuccess(elementId, message) {
 }
 
 function showLoading(show = true) {
-    document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
+    const loadingOverlay = document.getElementById('loading-overlay');
+    if (loadingOverlay) {
+        loadingOverlay.style.display = show ? 'flex' : 'none';
+    }
 }
 
 function hideLoading() {
@@ -335,7 +338,11 @@ function showMainScreen() {
     if (userEmail && state.user && state.user.email) {
         userEmail.textContent = state.user.email;
     }
-    loadDashboard();
+    
+    // Only load dashboard if dashboard elements exist (not on settings page)
+    if (document.getElementById('total-expenses')) {
+        loadDashboard();
+    }
 }
 
 function switchView(viewName) {
@@ -659,8 +666,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         showMainScreen();
     }
 
-    // Auth tab switching
-    document.querySelectorAll('.tab-btn').forEach(btn => {
+    // Only initialize dashboard-specific event listeners if on dashboard page
+    const isDashboardPage = document.getElementById('expense-form') !== null;
+    
+    // Auth tab switching (only on dashboard page)
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    if (tabButtons.length > 0) {
+        tabButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             const tab = btn.dataset.tab;
             
@@ -671,9 +683,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById(`${tab}-form`).classList.add('active');
         });
     });
+    }
 
     // Login form
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
         const email = document.getElementById('login-email').value;
@@ -689,9 +704,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             showLoading(false);
         }
     });
+    }
 
     // Signup form
-    document.getElementById('signup-form').addEventListener('submit', async (e) => {
+    const signupForm = document.getElementById('signup-form');
+    if (signupForm) {
+        signupForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
         const email = document.getElementById('signup-email').value;
@@ -722,9 +740,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             showLoading(false);
         }
     });
+    }
 
     // Confirmation form
-    document.getElementById('confirm-form').addEventListener('submit', async (e) => {
+    const confirmForm = document.getElementById('confirm-form');
+    if (confirmForm) {
+        confirmForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
         const email = document.getElementById('confirmation-email').value;
@@ -746,12 +767,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             showLoading(false);
         }
     });
+    }
 
     // Logout (supports both email/password and OAuth)
-    document.getElementById('logout-btn').addEventListener('click', logoutWithOAuth);
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', logoutWithOAuth);
+    }
 
-    // Navigation
-    document.querySelectorAll('.nav-btn').forEach(btn => {
+    // Dashboard-specific initialization
+    if (isDashboardPage) {
+        // Navigation
+        document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             // Settings button navigates to settings.html page
             if (btn.dataset.view === 'settings') {
@@ -907,10 +934,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize settings view
     initializeSettingsView();
     
-    // Load projects on app start if authenticated
-    if (checkAuth()) {
-        loadProjectDropdowns().catch(console.error);
-    }
+        // Load projects on app start if authenticated
+        if (checkAuth()) {
+            loadProjectDropdowns().catch(console.error);
+        }
+    } // End of isDashboardPage check
 });
 
 // Projects Module - Add this to app.js

@@ -496,3 +496,53 @@ header h1 {
         align-items: flex-start;
     }
 }
+
+/* Settings Tabs */
+.settings-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.settings-tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 500;
+    color: #6b7280;
+    transition: all 0.2s;
+    margin-bottom: -2px;
+}
+
+.settings-tab-btn:hover {
+    color: #374151;
+    background-color: #f9fafb;
+}
+
+.settings-tab-btn.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+}
+
+.tab-icon {
+    font-size: 18px;
+}
+
+.tab-label {
+    font-weight: 600;
+}
+
+.settings-tab-content {
+    display: none;
+}
+
+.settings-tab-content.active {
+    display: block;
+}

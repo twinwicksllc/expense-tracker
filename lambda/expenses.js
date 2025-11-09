@@ -1,9 +1,8 @@
-JavaScript File: lambda_expenses.js
+// Expense Tracker Lambda Functions
 
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, PutCommand, QueryCommand, GetCommand, UpdateCommand, DeleteCommand } = require('@aws-sdk/lib-dynamodb');
 const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
-const { CognitoIdentityProviderClient, AdminGetUserCommand } = require('@aws-sdk/client-cognito-identity-provider');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { v4: uuidv4 } = require('uuid');
 const multipart = require('lambda-multipart-parser');
@@ -11,7 +10,6 @@ const multipart = require('lambda-multipart-parser');
 const dynamoClient = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
 const s3Client = new S3Client({});
-const cognitoClient = new CognitoIdentityProviderClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
 const TRANSACTIONS_TABLE = process.env.TRANSACTIONS_TABLE;
 const RECEIPTS_BUCKET = process.env.RECEIPTS_BUCKET;
@@ -110,47 +108,11 @@ function sanitizeString(str, maxLength = 1000) {
 }
 
 /**
- * Get primary user ID from Cognito authorizer context
- * Handles both direct (email/password) and federated (Google OAuth) logins
- * For federated logins, resolves to the primary linked account's sub
+ * Get user ID from Cognito authorizer context
  */
-async function getUserId(event) {
-    const claims = event.requestContext?.authorizer?.claims;
-    if (!claims) {
-        return null;
-    }
-    
-    // Check if this is a federated login (has identities claim)
-    if (claims.identities) {
-        try {
-            // Parse identities to get the federated userId
-            const identities = JSON.parse(claims.identities);
-            if (identities && identities.length > 0) {
-                const federatedUserId = identities[0].userId;
-                
-                // Query Cognito to get the primary user's details
-                const command = new AdminGetUserCommand({
-                    UserPoolId: process.env.USER_POOL_ID,
-                    Username: federatedUserId
-                });
-                
-                const user = await cognitoClient.send(command);
-                
-                // Find the primary user's sub attribute
-                const subAttr = user.UserAttributes?.find(attr => attr.Name === 'sub');
-                if (subAttr) {
-                    console.log(`Resolved federated user ${federatedUserId} to primary user ${subAttr.Value}`);
-                    return subAttr.Value;
-                }
-            }
-        } catch (error) {
-            console.error('Error resolving federated identity:', error);
-            // Fall back to using the sub from claims
-        }
-    }
-    
-    // For direct logins or if resolution fails, use sub directly
-    return claims.sub || event.requestContext.authorizer?.principalId;
+function getUserId(event) {
+    return event.requestContext.authorizer?.claims?.sub || 
+           event.requestContext.authorizer?.principalId;
 }
 
 /**
@@ -158,7 +120,7 @@ async function getUserId(event) {
  */
 exports.createExpense = async (event) => {
     try {
-        const userId = await getUserId(event);
+        const userId = getUserId(event);
         if (!userId) {
             return {
                 statusCode: 401,
@@ -282,9 +244,10 @@ exports.createExpense = async (event) => {
 
 /**
  * Get all expenses for user
- */exports.listExpenses = async (event) => {
+ */
+exports.getExpenses = async (event) => {
     try {
-        const userId = await getUserId(event);
+        const userId = getUserId(event);
         if (!userId) {
             return {
                 statusCode: 401,
@@ -369,9 +332,11 @@ exports.createExpense = async (event) => {
 
 /**
  * Get single expense
- *exports.deleteExpense = async (event) => {
+ */
+exports.getExpense = async (event) => {
     try {
-        const userId = await getUserId(event);        if (!userId) {
+        const userId = getUserId(event);
+        if (!userId) {
             return {
                 statusCode: 401,
                 headers: {
@@ -437,7 +402,7 @@ exports.createExpense = async (event) => {
  */
 exports.updateExpense = async (event) => {
     try {
-        const userId = await getUserId(event);
+        const userId = getUserId(event);
         if (!userId) {
             return {
                 statusCode: 401,
@@ -557,3 +522,171 @@ exports.updateExpense = async (event) => {
 
         const result = await docClient.send(new UpdateCommand({
     
+            TableName: TRANSACTIONS_TABLE,
+            Key: { userId, transactionId },
+            UpdateExpression: 'SET ' + updateExpressions.join(', '),
+            ExpressionAttributeNames: expressionAttributeNames,
+            ExpressionAttributeValues: expressionAttributeValues,
+            ReturnValues: 'ALL_NEW'
+        }));
+
+        return {
+            statusCode: 200,
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
+            },
+            body: JSON.stringify(result.Attributes)
+        };
+    } catch (error) {
+        console.error('Update expense error:', error);
+        
+        return {
+            statusCode: 500,
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
+            },
+            body: JSON.stringify({
+                message: error.message || 'Failed to update expense'
+            })
+        };
+    }
+};
+
+/**
+ * Delete expense
+ */
+exports.deleteExpense = async (event) => {
+    try {
+        const userId = getUserId(event);
+        if (!userId) {
+            return {
+                statusCode: 401,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                    'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
+                },
+                body: JSON.stringify({ message: 'Unauthorized' })
+            };
+        }
+
+        const transactionId = event.pathParameters.transactionId;
+
+        // First get the expense to check if it has a receipt
+        const getResult = await docClient.send(new GetCommand({
+            TableName: TRANSACTIONS_TABLE,
+            Key: { userId, transactionId }
+        }));
+
+        if (!getResult.Item) {
+            return {
+                statusCode: 404,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                    'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
+                },
+                body: JSON.stringify({ message: 'Expense not found' })
+            };
+        }
+
+        // Delete receipt from S3 if exists
+        if (getResult.Item.receiptKey) {
+            await s3Client.send(new DeleteObjectCommand({
+                Bucket: RECEIPTS_BUCKET,
+                Key: getResult.Item.receiptKey
+            }));
+        }
+
+        // Delete from DynamoDB
+        await docClient.send(new DeleteCommand({
+            TableName: TRANSACTIONS_TABLE,
+            Key: { userId, transactionId }
+        }));
+
+        return {
+            statusCode: 200,
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
+            },
+            body: JSON.stringify({ message: 'Expense deleted successfully' })
+        };
+    } catch (error) {
+        console.error('Delete expense error:', error);
+        
+        return {
+            statusCode: 500,
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
+            },
+            body: JSON.stringify({
+                message: error.message || 'Failed to delete expense'
+            })
+        };
+    }
+};
+
+/**
+ * Main Lambda handler - CRITICAL FOR LAMBDA TO WORK
+ */
+exports.handler = async (event) => {
+    console.log('Event:', JSON.stringify(event));
+    
+    const httpMethod = event.httpMethod;
+    const resource = event.resource;
+    
+    try {
+        // Route to appropriate function based on HTTP method and resource
+        if (resource === '/expenses' && httpMethod === 'GET') {
+            return await exports.getExpenses(event);
+        } else if (resource === '/expenses' && httpMethod === 'POST') {
+            return await exports.createExpense(event);
+        } else if (resource === '/expenses/{transactionId}' && httpMethod === 'GET') {
+            return await exports.getExpense(event);
+        } else if (resource === '/expenses/{transactionId}' && httpMethod === 'PUT') {
+            return await exports.updateExpense(event);
+        } else if (resource === '/expenses/{transactionId}' && httpMethod === 'DELETE') {
+            return await exports.deleteExpense(event);
+        } else {
+            return {
+                statusCode: 404,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                    'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
+                },
+                body: JSON.stringify({ message: 'Route not found' })
+            };
+        }
+    } catch (error) {
+        console.error('Handler error:', error);
+        return {
+            statusCode: 500,
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
+            },
+            body: JSON.stringify({ 
+                message: 'Internal server error',
+                error: error.message 
+            })
+        };
+    }
+};

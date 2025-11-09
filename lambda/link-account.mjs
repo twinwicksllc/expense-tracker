@@ -174,10 +174,43 @@ export const handler = async (event) => {
       };
     }
 
-    const googleSub = googleDecoded.sub;
     const googleEmail = googleDecoded.email;
 
-    console.log(`Google user: ${googleSub}, email: ${googleEmail}`);
+    // Extract Google provider userId from identities claim
+    // The googleDecoded.sub is the Cognito federated user sub, NOT the Google provider userId
+    // We need to get the actual Google userId from the identities claim
+    let identities = googleDecoded.identities;
+    
+    // identities can be a string or array
+    if (typeof identities === 'string') {
+      try {
+        identities = JSON.parse(identities);
+      } catch (e) {
+        identities = null;
+      }
+    }
+
+    const googleIdentity = Array.isArray(identities)
+      ? identities.find(i => i.providerName === 'Google')
+      : null;
+
+    const googleUserId = googleIdentity?.userId;
+    
+    if (!googleUserId) {
+      console.error('Could not extract Google provider userId from identities claim');
+      console.error('googleDecoded:', JSON.stringify(googleDecoded, null, 2));
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: 'INVALID_GOOGLE_TOKEN',
+          message: 'Could not extract Google provider userId from token'
+        })
+      };
+    }
+
+    console.log(`Google user: ${googleUserId}, email: ${googleEmail}`);
 
     // Step 3: Verify emails match
     if (googleEmail.toLowerCase() !== currentUserEmail.toLowerCase()) {
@@ -207,7 +240,7 @@ export const handler = async (event) => {
         try {
           const identities = JSON.parse(identitiesAttr.Value);
           const googleIdentity = identities.find(id => 
-            id.providerName === 'Google' && id.userId === googleSub
+            id.providerName === 'Google' && id.userId === googleUserId
           );
           
           if (googleIdentity) {
@@ -253,13 +286,13 @@ export const handler = async (event) => {
       SourceUser: {
         ProviderName: 'Google',
         ProviderAttributeName: 'Cognito_Subject',
-        ProviderAttributeValue: googleSub
+        ProviderAttributeValue: googleUserId
       }
     });
 
     await cognitoClient.send(linkCommand);
 
-    console.log(`✅ Successfully linked Google:${googleSub} to Cognito user ${currentUserSub}`);
+    console.log(`✅ Successfully linked Google:${googleUserId} to Cognito user ${currentUserSub}`);
 
     return {
       statusCode: 200,

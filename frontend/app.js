@@ -622,8 +622,23 @@ async function confirmDeleteExpense(transactionId) {
 // Event Listeners
 document.addEventListener('DOMContentLoaded', async () => {
     // Check if this is an OAuth callback
+    // ONLY handle OAuth callbacks on the main page (index.html or /callback)
+    // Do NOT intercept OAuth callbacks meant for other pages (like settings.html)
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('code') || urlParams.has('error')) {
+    const currentPath = window.location.pathname;
+    
+    // Only handle OAuth callback if we're on the main page or /callback
+    // NOT on settings.html or other pages that handle their own OAuth flows
+    // Also check sessionStorage to see if this is a LINK_ACCOUNT flow
+    const oauthFlow = sessionStorage.getItem('oauthFlow');
+    
+    if ((urlParams.has('code') || urlParams.has('error')) && 
+        (currentPath === '/' || currentPath === '/index.html' || currentPath === '/callback')) {
+        // If this is marked as LINK_ACCOUNT flow, don't intercept it
+        if (oauthFlow === 'LINK_ACCOUNT') {
+            console.log('OAuth callback is for account linking, not intercepting');
+            return;
+        }
         await handleOAuthCallback();
         return;
     }
@@ -729,7 +744,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Navigation
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            switchView(btn.dataset.view);
+            // Settings button navigates to settings.html page
+            if (btn.dataset.view === 'settings') {
+                window.location.href = 'settings.html';
+            } else {
+                switchView(btn.dataset.view);
+            }
         });
     });
 

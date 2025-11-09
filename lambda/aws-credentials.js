@@ -201,6 +201,19 @@ exports.handler = async (event) => {
         const method = event.httpMethod;
         const path = event.path;
         
+        // Handle CORS preflight
+        if (method === 'OPTIONS') {
+            return {
+                statusCode: 200,
+                headers: {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+                },
+                body: ''
+            };
+        }
+        
         if (method === 'POST' && path === '/aws-credentials') {
             return await saveCredentials(event);
         } else if (method === 'GET' && path === '/aws-credentials') {

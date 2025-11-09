@@ -2,7 +2,7 @@
 
 const API_GATEWAY_URL = 'https://fcnq8h7mai.execute-api.us-east-1.amazonaws.com/prod';
 const COGNITO_DOMAIN = 'https://expense-tracker-prod.auth.us-east-1.amazoncognito.com';
-const CLIENT_ID = '7pj7nfvvd0kcqj2ck9aqjjqo6m';
+const CLIENT_ID = 'pk3l1fkkre0ms4si0prabfavl';
 const REDIRECT_URI = 'https://app.twin-wicks.com/settings.html';
 
 // Check if user is logged in
@@ -16,16 +16,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // Display user email
+    // Display user email and ID
     try {
         const payload = parseJwt(idToken);
         document.getElementById('user-email').textContent = payload.email || 'N/A';
+        const userIdElement = document.getElementById('user-id');
+        if (userIdElement) {
+            userIdElement.textContent = payload.sub || 'N/A';
+        }
         
         // Check if Google account is already linked
         await checkGoogleLinkStatus(payload);
     } catch (error) {
         console.error('Error loading user info:', error);
     }
+
+    // Setup tab switching
+    setupTabs();
+    
+    // Load AWS credentials status (for AWS tab)
+    loadAWSCredentialsStatus();
 
     // Check if we're returning from OAuth callback
     const urlParams = new URLSearchParams(window.location.search);
@@ -56,6 +66,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Clear state after validation
         sessionStorage.removeItem('oauthState');
+        sessionStorage.removeItem('oauthFlow');
         
         // Handle OAuth callback
         await handleLinkCallback(authCode);
@@ -89,7 +100,7 @@ async function checkGoogleLinkStatus(payload) {
     // Check if identities claim exists (indicates federated login)
     if (payload.identities) {
         try {
-            const identities = JSON.parse(payload.identities);
+            const identities = payload.identities;
             const googleIdentity = identities.find(id => id.providerName === 'Google');
             
             if (googleIdentity) {
@@ -137,6 +148,10 @@ function linkGoogleAccount() {
     
     // Store state in sessionStorage for validation
     sessionStorage.setItem('oauthState', state);
+    
+    // Mark this as a LINK_ACCOUNT flow (not a login flow)
+    // This helps differentiate between OAuth for login vs OAuth for account linking
+    sessionStorage.setItem('oauthFlow', 'LINK_ACCOUNT');
     
     // Build OAuth authorization URL
     const authUrl = `${COGNITO_DOMAIN}/oauth2/authorize?` + new URLSearchParams({
@@ -215,4 +230,223 @@ function showMessage(message, type = 'info') {
 function signOut() {
     localStorage.clear();
     window.location.href = 'index.html';
+}
+
+
+// Tab switching functionality
+function setupTabs() {
+    const tabButtons = document.querySelectorAll('.settings-tab-btn');
+    const tabContents = document.querySelectorAll('.settings-tab-content');
+    
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const targetTab = button.getAttribute('data-tab');
+            
+            // Remove active class from all tabs and contents
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            // Add active class to clicked tab and corresponding content
+            button.classList.add('active');
+            document.getElementById(`${targetTab}-tab`).classList.add('active');
+        });
+    });
+}
+
+// AWS Credentials Management (migrated from app.js)
+async function loadAWSCredentialsStatus() {
+    const statusDiv = document.getElementById('aws-credentials-status');
+    if (!statusDiv) return; // AWS tab not loaded yet
+    
+    const idToken = localStorage.getItem('idToken');
+    
+    try {
+        const response = await fetch(`${API_GATEWAY_URL}/aws-credentials`, {
+            headers: {
+                'Authorization': idToken
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.hasCredentials) {
+                statusDiv.innerHTML = `
+                    <div class="credential-status-card connected">
+                        <div class="status-header">
+                            <span class="status-icon">✓</span>
+                            <span class="status-text">AWS Account Connected</span>
+                        </div>
+                        <div class="credential-details">
+                            <p><strong>Access Key:</strong> ${data.accessKeyId || 'Not available'}</p>
+                            <p><strong>Region:</strong> ${data.region || 'us-east-1'}</p>
+                            ${data.iamArn ? `<p><strong>IAM ARN:</strong> <code>${data.iamArn}</code></p>` : ''}
+                        </div>
+                        <div class="credential-actions">
+                            <button type="button" id="update-aws-credentials" class="btn btn-secondary">Update Credentials</button>
+                            <button type="button" id="delete-aws-credentials" class="btn btn-danger">Delete Credentials</button>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('update-aws-credentials').addEventListener('click', showAWSCredentialsForm);
+                document.getElementById('delete-aws-credentials').addEventListener('click', deleteAWSCredentials);
+            } else {
+                showNoAWSCredentialsStatus();
+            }
+        } else {
+            showNoAWSCredentialsStatus();
+        }
+    } catch (error) {
+        console.error('Error loading AWS credentials status:', error);
+        showNoAWSCredentialsStatus();
+    }
+}
+
+function showNoAWSCredentialsStatus() {
+    const statusDiv = document.getElementById('aws-credentials-status');
+    if (!statusDiv) return;
+    
+    statusDiv.innerHTML = `
+        <div class="credential-status-card not-connected">
+            <div class="status-header">
+                <span class="status-icon">○</span>
+                <span class="status-text">No AWS Account Connected</span>
+            </div>
+            <p class="status-description">Connect your AWS account to import monthly cost data automatically.</p>
+            <button type="button" id="add-aws-credentials" class="btn btn-primary">Add AWS Credentials</button>
+        </div>
+    `;
+    
+    document.getElementById('add-aws-credentials').addEventListener('click', showAWSCredentialsForm);
+}
+
+function showAWSCredentialsForm() {
+    const form = document.getElementById('aws-credentials-form');
+    if (form) {
+        form.style.display = 'block';
+        
+        // Setup form event listeners
+        document.getElementById('save-aws-credentials').addEventListener('click', saveAWSCredentials);
+        document.getElementById('cancel-aws-credentials').addEventListener('click', () => {
+            form.style.display = 'none';
+            clearAWSCredentialsForm();
+        });
+        
+        const copyArnBtn = document.getElementById('copy-arn');
+        if (copyArnBtn) {
+            copyArnBtn.addEventListener('click', () => {
+                const arnValue = document.getElementById('iam-arn-value').textContent;
+                navigator.clipboard.writeText(arnValue);
+                showAWSMessage('ARN copied to clipboard!', 'success');
+            });
+        }
+    }
+}
+
+async function saveAWSCredentials() {
+    const accessKey = document.getElementById('aws-access-key').value.trim();
+    const secretKey = document.getElementById('aws-secret-key').value.trim();
+    const region = document.getElementById('aws-region').value;
+    
+    if (!accessKey || !secretKey) {
+        showAWSMessage('Please enter both Access Key ID and Secret Access Key', 'error');
+        return;
+    }
+    
+    const idToken = localStorage.getItem('idToken');
+    
+    try {
+        const response = await fetch(`${API_GATEWAY_URL}/aws-credentials`, {
+            method: 'POST',
+            headers: {
+                'Authorization': idToken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                accessKeyId: accessKey,
+                secretAccessKey: secretKey,
+                region: region
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showAWSMessage('AWS credentials saved successfully!', 'success');
+            
+            // Display IAM ARN if available
+            if (data.iamArn) {
+                const arnDisplay = document.getElementById('iam-arn-display');
+                const arnValue = document.getElementById('iam-arn-value');
+                if (arnDisplay && arnValue) {
+                    arnValue.textContent = data.iamArn;
+                    arnDisplay.style.display = 'block';
+                }
+            }
+            
+            // Reload status after a delay
+            setTimeout(() => {
+                document.getElementById('aws-credentials-form').style.display = 'none';
+                clearAWSCredentialsForm();
+                loadAWSCredentialsStatus();
+            }, 2000);
+        } else {
+            showAWSMessage(data.error || 'Failed to save credentials', 'error');
+        }
+    } catch (error) {
+        console.error('Error saving AWS credentials:', error);
+        showAWSMessage('Error saving credentials. Please try again.', 'error');
+    }
+}
+
+async function deleteAWSCredentials() {
+    if (!confirm('Are you sure you want to delete your AWS credentials? This will stop automatic cost imports.')) {
+        return;
+    }
+    
+    const idToken = localStorage.getItem('idToken');
+    
+    try {
+        const response = await fetch(`${API_GATEWAY_URL}/aws-credentials`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': idToken
+            }
+        });
+        
+        if (response.ok) {
+            showAWSMessage('AWS credentials deleted successfully', 'success');
+            setTimeout(() => {
+                loadAWSCredentialsStatus();
+            }, 1500);
+        } else {
+            const data = await response.json();
+            showAWSMessage(data.error || 'Failed to delete credentials', 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting AWS credentials:', error);
+        showAWSMessage('Error deleting credentials. Please try again.', 'error');
+    }
+}
+
+function clearAWSCredentialsForm() {
+    document.getElementById('aws-access-key').value = '';
+    document.getElementById('aws-secret-key').value = '';
+    document.getElementById('aws-region').value = 'us-east-1';
+    document.getElementById('iam-arn-display').style.display = 'none';
+    showAWSMessage('', '');
+}
+
+function showAWSMessage(message, type) {
+    const errorDiv = document.getElementById('aws-credentials-error');
+    const successDiv = document.getElementById('aws-credentials-success');
+    
+    if (errorDiv) errorDiv.textContent = '';
+    if (successDiv) successDiv.textContent = '';
+    
+    if (type === 'error' && errorDiv) {
+        errorDiv.textContent = message;
+    } else if (type === 'success' && successDiv) {
+        successDiv.textContent = message;
+    }
 }

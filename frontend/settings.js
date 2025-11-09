@@ -128,7 +128,7 @@ function updateLinkStatus(isLinked, email = null) {
         statusTitle.textContent = 'Google Account: Linked';
         statusSubtitle.textContent = email || 'Successfully linked';
         linkBtn.textContent = 'Unlink';
-        linkBtn.onclick = () => showMessage('Unlinking not yet implemented', 'info');
+        linkBtn.onclick = unlinkGoogleAccount;
         linkBtn.classList.add('btn-secondary');
         linkBtn.classList.remove('btn-google');
     } else {
@@ -208,6 +208,92 @@ async function handleLinkCallback(authCode) {
         
         // Clean URL
         window.history.replaceState({}, document.title, window.location.pathname);
+    }
+}
+
+// Unlink Google account
+async function unlinkGoogleAccount() {
+    if (!confirm('Are you sure you want to unlink your Google account? You will still be able to sign in with email and password.')) {
+        return;
+    }
+
+    showMessage('Unlinking Google account...', 'info');
+
+    try {
+        const idToken = localStorage.getItem('idToken');
+        
+        if (!idToken) {
+            showMessage('❌ Please log in again to unlink your account', 'error');
+            return;
+        }
+
+        // Call backend API to unlink account
+        const response = await fetch(`${API_GATEWAY_URL}/unlink-account`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+            }
+        });
+
+        // Validate response
+        if (!response) {
+            throw new Error('No response from server');
+        }
+
+        let result;
+        try {
+            result = await response.json();
+        } catch (e) {
+            throw new Error('Invalid response from server');
+        }
+
+        // Validate response structure
+        if (typeof result !== 'object' || result === null) {
+            throw new Error('Invalid response format');
+        }
+
+        // Handle specific error cases
+        if (response.status === 401) {
+            showMessage('❌ Your session has expired. Please log in again.', 'error');
+            setTimeout(() => {
+                localStorage.clear();
+                window.location.href = 'index.html';
+            }, 2000);
+            return;
+        }
+
+        if (response.status === 429) {
+            showMessage('❌ Too many requests. Please wait a moment and try again.', 'error');
+            return;
+        }
+
+        if (response.ok && result.success === true) {
+            showMessage('✅ Google account unlinked successfully! Redirecting to login...', 'success');
+            updateLinkStatus(false);
+            
+            // Token has been revoked, force re-login
+            setTimeout(() => {
+                localStorage.clear();
+                window.location.href = 'index.html';
+            }, 2000);
+        } else {
+            const errorMsg = typeof result.message === 'string' ? result.message : 'Failed to unlink account';
+            showMessage(`❌ ${errorMsg}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error unlinking account:', error);
+        
+        // User-friendly error messages
+        let userMessage = 'Failed to unlink account. Please try again.';
+        
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+            userMessage = 'Network error. Please check your connection and try again.';
+        } else if (error.message.includes('session') || error.message.includes('authenticated')) {
+            userMessage = 'Your session has expired. Please log in again.';
+        }
+        
+        showMessage(`❌ ${userMessage}`, 'error');
     }
 }
 

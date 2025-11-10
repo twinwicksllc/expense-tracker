@@ -843,13 +843,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('expense-form').addEventListener('submit', async (e) => {
         e.preventDefault();
 
+        // Get projectId from dropdown
+        const projectId = document.getElementById('expense-project').value || null;
+        
+        // Look up projectName from allProjects array
+        let projectName = null;
+        if (projectId) {
+            const project = allProjects.find(p => p.projectId === projectId);
+            if (project) {
+                projectName = project.name;
+            }
+        }
+
         const expenseData = {
             vendor: document.getElementById('expense-vendor').value,
             amount: parseFloat(document.getElementById('expense-amount').value),
             date: document.getElementById('expense-date').value,
             category: document.getElementById('expense-category').value,
             description: document.getElementById('expense-description').value,
-            projectId: document.getElementById('expense-project').value || null,
+            projectId: projectId,
+            projectName: projectName,
             notes: ''
         };
         
@@ -890,12 +903,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         e.preventDefault();
 
         const transactionId = document.getElementById('edit-transaction-id').value;
+        
+        // Get projectId from dropdown
+        const projectId = document.getElementById('edit-project').value || null;
+        
+        // Look up projectName from allProjects array
+        let projectName = null;
+        if (projectId) {
+            const project = allProjects.find(p => p.projectId === projectId);
+            if (project) {
+                projectName = project.name;
+            }
+        }
+        
         const updates = {
             vendor: document.getElementById('edit-vendor').value,
             amount: parseFloat(document.getElementById('edit-amount').value),
             transactionDate: document.getElementById('edit-date').value,
             category: document.getElementById('edit-category').value,
-            projectId: document.getElementById('edit-project').value || null,
+            projectId: projectId,
+            projectName: projectName,
             description: document.getElementById('edit-description').value
         };
 

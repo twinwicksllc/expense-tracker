@@ -46,18 +46,15 @@ async function getUserCredentials(userId) {
 }
 
 // Check if expense already exists (duplicate detection)
-async function expenseExists(userId, vendor, amount, date) {
+async function expenseExists(userId, vendor, amount, transactionDate) {
     const result = await docClient.send(new ScanCommand({
         TableName: TRANSACTIONS_TABLE,
-        FilterExpression: 'userId = :userId AND vendor = :vendor AND amount = :amount AND #date = :date',
-        ExpressionAttributeNames: {
-            '#date': 'date'
-        },
+        FilterExpression: 'userId = :userId AND vendor = :vendor AND amount = :amount AND transactionDate = :transactionDate',
         ExpressionAttributeValues: {
             ':userId': userId,
             ':vendor': vendor,
             ':amount': amount,
-            ':date': date
+            ':transactionDate': transactionDate
         }
     }));
     
@@ -154,7 +151,7 @@ async function importCostsForUser(userId, months = 1) {
                     transactionId,
                     vendor,
                     amount: expenseAmount,
-                    date: endDate,
+                    transactionDate: endDate,
                     category: 'Software',
                     description: `AWS ${serviceName} charges for ${targetMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}`,
                     uploadDate: now,

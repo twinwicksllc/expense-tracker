@@ -1066,6 +1066,10 @@ async function loadProjects() {
     try {
         showLoading();
         allProjects = await ProjectAPI.getProjects();
+        
+        // Calculate expense totals for each project
+        await calculateProjectTotals();
+        
         renderProjects();
         await loadProjectDropdowns();
     } catch (error) {
@@ -1073,6 +1077,34 @@ async function loadProjects() {
         showError('Failed to load projects');
     } finally {
         hideLoading();
+    }
+}
+
+// Calculate expense totals for each project
+async function calculateProjectTotals() {
+    try {
+        // Get all expenses
+        const expenses = await getExpenses();
+        
+        // Initialize totals for each project
+        allProjects.forEach(project => {
+            project.totalAmount = 0;
+            project.expenseCount = 0;
+        });
+        
+        // Calculate totals from expenses
+        expenses.forEach(expense => {
+            if (expense.projectId) {
+                const project = allProjects.find(p => p.projectId === expense.projectId);
+                if (project) {
+                    project.totalAmount += parseFloat(expense.amount) || 0;
+                    project.expenseCount += 1;
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error calculating project totals:', error);
+        // Don't throw - just log the error and continue with zero totals
     }
 }
 

@@ -368,12 +368,14 @@ async function loadAWSCredentialsStatus() {
                             ${data.iamArn ? `<p><strong>IAM ARN:</strong> <code>${data.iamArn}</code></p>` : ''}
                         </div>
                         <div class="credential-actions">
+                            <button type="button" id="trigger-aws-import" class="btn btn-primary">Import Now</button>
                             <button type="button" id="update-aws-credentials" class="btn btn-secondary">Update Credentials</button>
                             <button type="button" id="delete-aws-credentials" class="btn btn-danger">Delete Credentials</button>
                         </div>
                     </div>
                 `;
                 
+                document.getElementById('trigger-aws-import').addEventListener('click', triggerAWSImport);
                 document.getElementById('update-aws-credentials').addEventListener('click', showAWSCredentialsForm);
                 document.getElementById('delete-aws-credentials').addEventListener('click', deleteAWSCredentials);
             } else {
@@ -482,6 +484,54 @@ async function saveAWSCredentials() {
     } catch (error) {
         console.error('Error saving AWS credentials:', error);
         showAWSMessage('Error saving credentials. Please try again.', 'error');
+    }
+}
+
+async function triggerAWSImport() {
+    const button = document.getElementById('trigger-aws-import');
+    const originalText = button.textContent;
+    
+    button.disabled = true;
+    button.textContent = 'Importing...';
+    
+    const idToken = localStorage.getItem('idToken');
+    
+    try {
+        const response = await fetch(`${API_GATEWAY_URL}/aws-cost-import`, {
+            method: 'POST',
+            headers: {
+                'Authorization': idToken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({})
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            // The Lambda returns a summary with results array
+            if (data.results && data.results.length > 0) {
+                const result = data.results[0]; // Get first result (current user)
+                if (result.status === 'success') {
+                    const message = `Import successful! ${result.expensesCreated} expenses imported (${result.duplicatesSkipped} duplicates skipped, ${result.belowMinimumSkipped} zero-cost items skipped). Total: $${result.totalAmount}`;
+                    showAWSMessage(message, 'success');
+                } else if (result.status === 'skipped') {
+                    showAWSMessage(`Import skipped: ${result.reason}`, 'error');
+                } else {
+                    showAWSMessage(`Import failed: ${result.error}`, 'error');
+                }
+            } else {
+                showAWSMessage('Import completed but no results returned', 'error');
+            }
+        } else {
+            const data = await response.json();
+            showAWSMessage(data.error || 'Failed to import AWS costs', 'error');
+        }
+    } catch (error) {
+        console.error('Error triggering AWS import:', error);
+        showAWSMessage('Error triggering import. Please try again.', 'error');
+    } finally {
+        button.disabled = false;
+        button.textContent = originalText;
     }
 }
 

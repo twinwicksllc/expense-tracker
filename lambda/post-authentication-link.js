@@ -44,18 +44,28 @@ exports.handler = async (event, context) => {
             userPoolId: USER_POOL_ID
         });
         
-        // Security check: Only proceed if email is verified
-        if (emailVerified !== 'true') {
-            console.log('Email not verified, skipping account linking', {
+        // Check if this is a federated (Google) user
+        const isFederatedUser = currentUsername.includes('_');
+        
+        // For federated users, email is verified by the identity provider (Google)
+        // Cognito may not set email_verified=true, but we can trust Google's verification
+        const isEmailTrusted = emailVerified === 'true' || isFederatedUser;
+        
+        // Security check: Only proceed if email is verified or from trusted provider
+        if (!isEmailTrusted) {
+            console.log('Email not verified and not from trusted provider, skipping account linking', {
                 email,
-                emailVerified
+                emailVerified,
+                isFederated: isFederatedUser
             });
             return event;
         }
         
-        // Determine if this is a federated user (Google OAuth)
-        // Federated usernames have format: Google_<user_id>
-        const isFederatedUser = currentUsername.includes('_');
+        console.log('Email verification status:', {
+            emailVerified,
+            isFederated: isFederatedUser,
+            trusted: isEmailTrusted
+        });
         
         console.log('User type:', {
             username: currentUsername,

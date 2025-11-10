@@ -44,18 +44,24 @@ exports.handler = async (event, context) => {
             userPoolId: USER_POOL_ID
         });
         
-        // Security check: Only proceed if email is verified
-        if (emailVerified !== 'true') {
-            console.log('Email not verified, skipping account linking', {
+        // Determine if this is a federated user (Google OAuth)
+        // Check the identities attribute instead of username format
+        const identitiesAttr = event.request.userAttributes.identities;
+        const isFederatedUser = identitiesAttr && identitiesAttr.length > 0;
+        
+        // For federated users, email is verified by the identity provider (Google)
+        // Cognito may not set email_verified=true, but we can trust Google's verification
+        const isEmailTrusted = emailVerified === 'true' || isFederatedUser;
+        
+        // Security check: Only proceed if email is verified or from trusted provider
+        if (!isEmailTrusted) {
+            console.log('Email not verified and not from trusted provider, skipping account linking', {
                 email,
-                emailVerified
+                emailVerified,
+                isFederated: isFederatedUser
             });
             return event;
         }
-        
-        // Determine if this is a federated user (Google OAuth)
-        // Federated usernames have format: Google_<user_id>
-        const isFederatedUser = currentUsername.includes('_');
         
         console.log('User type:', {
             username: currentUsername,
@@ -80,16 +86,23 @@ exports.handler = async (event, context) => {
             attr => attr.Name === 'email_verified'
         )?.Value;
         
-        if (otherEmailVerified !== 'true') {
-            console.log('Other account email not verified, skipping linking', {
+        // Determine if the other account is federated
+        const otherIdentitiesAttr = existingUser.Attributes.find(
+            attr => attr.Name === 'identities'
+        )?.Value;
+        const otherIsFederated = otherIdentitiesAttr && otherIdentitiesAttr.length > 0;
+        
+        // For the other account, also trust federated provider's email verification
+        const otherEmailTrusted = otherEmailVerified === 'true' || otherIsFederated;
+        
+        if (!otherEmailTrusted) {
+            console.log('Other account email not verified and not from trusted provider, skipping linking', {
                 otherUsername: existingUser.Username,
-                otherEmailVerified
+                otherEmailVerified,
+                otherIsFederated
             });
             return event;
         }
-        
-        // Determine if the other account is federated
-        const otherIsFederated = existingUser.Username.includes('_');
         
         // Only link if one is federated and one is native (email/password)
         if (isFederatedUser === otherIsFederated) {

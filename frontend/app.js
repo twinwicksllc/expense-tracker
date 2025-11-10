@@ -73,6 +73,12 @@ function validateExpenseForm(data) {
 
 function showError(elementId, message) {
     const element = document.getElementById(elementId);
+    if (!element) {
+        console.error(`Error element not found: ${elementId}`);
+        console.error(`Error message: ${message}`);
+        alert(message); // Fallback to alert if element doesn't exist
+        return;
+    }
     element.textContent = message;
     element.classList.add('show');
     setTimeout(() => element.classList.remove('show'), 5000);
@@ -80,6 +86,11 @@ function showError(elementId, message) {
 
 function showSuccess(elementId, message) {
     const element = document.getElementById(elementId);
+    if (!element) {
+        console.warn(`Success element not found: ${elementId}`);
+        console.log(`Success message: ${message}`);
+        return;
+    }
     element.textContent = message;
     element.classList.add('show');
     setTimeout(() => element.classList.remove('show'), 5000);

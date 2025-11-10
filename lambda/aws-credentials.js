@@ -108,9 +108,18 @@ async function getCredentialsStatus(event) {
                 'Access-Control-Allow-Origin': '*'
             },
             body: JSON.stringify({
-                configured: false
+                hasCredentials: false
             })
         };
+    }
+    
+    // Decrypt access key ID to show partial key (last 4 chars)
+    let accessKeyId = 'Not available';
+    try {
+        const decryptedKey = decrypt(result.Item.accessKeyId);
+        accessKeyId = decryptedKey.slice(-4).padStart(decryptedKey.length, '*');
+    } catch (error) {
+        console.error('Error decrypting access key for display:', error);
     }
     
     return {
@@ -120,7 +129,8 @@ async function getCredentialsStatus(event) {
             'Access-Control-Allow-Origin': '*'
         },
         body: JSON.stringify({
-            configured: true,
+            hasCredentials: true,
+            accessKeyId: accessKeyId,
             region: result.Item.region,
             enabled: result.Item.enabled,
             createdAt: result.Item.createdAt,

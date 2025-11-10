@@ -827,12 +827,12 @@ exports.getDashboard = async (event) => {
         // Filter expenses by period
         console.log(`Filtering ${allExpenses.length} expenses for period=${period}, startDate=${startDate.toISOString()}, endDate=${endDate.toISOString()}`);
         const periodExpenses = allExpenses.filter(exp => {
-            const expDate = new Date(exp.date);
+            const expDate = new Date(exp.transactionDate || exp.date);
             return expDate >= startDate && expDate <= endDate;
         });
 
         const compareExpenses = allExpenses.filter(exp => {
-            const expDate = new Date(exp.date);
+            const expDate = new Date(exp.transactionDate || exp.date);
             return expDate >= compareStartDate && expDate <= compareEndDate;
         });
 
@@ -845,7 +845,7 @@ exports.getDashboard = async (event) => {
         const monthlyData = {};
         
         periodExpenses.forEach(exp => {
-            const expDate = new Date(exp.date);
+            const expDate = new Date(exp.transactionDate || exp.date);
             const monthKey = `${expDate.getFullYear()}-${String(expDate.getMonth() + 1).padStart(2, '0')}`;
             
             if (!monthlyData[monthKey]) {
@@ -908,7 +908,7 @@ exports.getDashboard = async (event) => {
         // Calculate current month total for the stats card
         const currentMonthTotal = periodExpenses
             .filter(exp => {
-                const d = new Date(exp.date);
+                const d = new Date(exp.transactionDate || exp.date);
                 return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
             })
             .reduce((sum, exp) => sum + exp.amount, 0);

@@ -58,9 +58,9 @@ async function saveCredentials(event) {
         };
     }
     
-    // Encrypt the credentials
-    const encryptedAccessKey = encrypt(accessKeyId);
-    const encryptedSecretKey = encrypt(secretAccessKey);
+    // Encrypt the credentials (trim whitespace first)
+    const encryptedAccessKey = encrypt(accessKeyId.trim());
+    const encryptedSecretKey = encrypt(secretAccessKey.trim());
     
     const item = {
         userId,

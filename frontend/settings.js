@@ -368,6 +368,16 @@ async function loadAWSCredentialsStatus() {
                             ${data.iamArn ? `<p><strong>IAM ARN:</strong> <code>${data.iamArn}</code></p>` : ''}
                         </div>
                         <div class="credential-actions">
+                            <div class="form-group" style="margin-bottom: 1rem;">
+                                <label for="import-months">Import last:</label>
+                                <select id="import-months" style="margin-left: 0.5rem; padding: 0.5rem;">
+                                    <option value="1">1 month</option>
+                                    <option value="2">2 months</option>
+                                    <option value="3">3 months</option>
+                                    <option value="6">6 months</option>
+                                    <option value="12">12 months</option>
+                                </select>
+                            </div>
                             <button type="button" id="trigger-aws-import" class="btn btn-primary">Import Now</button>
                             <button type="button" id="update-aws-credentials" class="btn btn-secondary">Update Credentials</button>
                             <button type="button" id="delete-aws-credentials" class="btn btn-danger">Delete Credentials</button>
@@ -495,6 +505,7 @@ async function triggerAWSImport() {
     button.textContent = 'Importing...';
     
     const idToken = localStorage.getItem('idToken');
+    const months = parseInt(document.getElementById('import-months').value) || 1;
     
     try {
         const response = await fetch(`${API_GATEWAY_URL}/aws-cost-import`, {
@@ -503,7 +514,7 @@ async function triggerAWSImport() {
                 'Authorization': idToken,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({})
+            body: JSON.stringify({ months })
         });
         
         if (response.ok) {

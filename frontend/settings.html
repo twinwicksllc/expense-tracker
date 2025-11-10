@@ -104,6 +104,9 @@
                             <!-- Status will be loaded here -->
                         </div>
                         
+                        <div class="error-message" id="aws-credentials-error"></div>
+                        <div class="success-message" id="aws-credentials-success"></div>
+                        
                         <div id="aws-credentials-form" class="credentials-form" style="display: none;">
                             <div class="form-group">
                                 <label for="aws-access-key">AWS Access Key ID *</label>
@@ -180,9 +183,6 @@
                                 <button type="button" id="save-aws-credentials" class="btn btn-primary">Save Credentials</button>
                                 <button type="button" id="cancel-aws-credentials" class="btn btn-secondary">Cancel</button>
                             </div>
-                            
-                            <div class="error-message" id="aws-credentials-error"></div>
-                            <div class="success-message" id="aws-credentials-success"></div>
                         </div>
                         
                         <div class="info-box setup-instructions">

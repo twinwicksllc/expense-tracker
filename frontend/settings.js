@@ -577,12 +577,22 @@ function showAWSMessage(message, type) {
     const errorDiv = document.getElementById('aws-credentials-error');
     const successDiv = document.getElementById('aws-credentials-success');
     
-    if (errorDiv) errorDiv.textContent = '';
-    if (successDiv) successDiv.textContent = '';
+    // Clear both messages and remove show class
+    if (errorDiv) {
+        errorDiv.textContent = '';
+        errorDiv.classList.remove('show');
+    }
+    if (successDiv) {
+        successDiv.textContent = '';
+        successDiv.classList.remove('show');
+    }
     
+    // Show the appropriate message
     if (type === 'error' && errorDiv) {
         errorDiv.textContent = message;
+        errorDiv.classList.add('show');
     } else if (type === 'success' && successDiv) {
         successDiv.textContent = message;
+        successDiv.classList.add('show');
     }
 }

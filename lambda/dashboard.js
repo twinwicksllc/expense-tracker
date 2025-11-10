@@ -279,6 +279,25 @@ exports.getExpenses = async (event) => {
             });
         }
 
+        // Regenerate presigned URLs for receipts (7 day expiration)
+        for (const expense of expenses) {
+            if (expense.receiptKey) {
+                try {
+                    expense.receiptUrl = await getSignedUrl(
+                        s3Client,
+                        new GetObjectCommand({
+                            Bucket: RECEIPTS_BUCKET,
+                            Key: expense.receiptKey
+                        }),
+                        { expiresIn: 604800 } // 7 days
+                    );
+                } catch (error) {
+                    console.error(`Failed to generate presigned URL for ${expense.receiptKey}:`, error);
+                    expense.receiptUrl = null;
+                }
+            }
+        }
+
         return {
             statusCode: 200,
             headers: {
@@ -693,6 +712,25 @@ exports.getDashboard = async (event) => {
         }));
 
         const allExpenses = result.Items || [];
+
+        // Regenerate presigned URLs for all receipts (7 day expiration)
+        for (const expense of allExpenses) {
+            if (expense.receiptKey) {
+                try {
+                    expense.receiptUrl = await getSignedUrl(
+                        s3Client,
+                        new GetObjectCommand({
+                            Bucket: RECEIPTS_BUCKET,
+                            Key: expense.receiptKey
+                        }),
+                        { expiresIn: 604800 } // 7 days
+                    );
+                } catch (error) {
+                    console.error(`Failed to generate presigned URL for ${expense.receiptKey}:`, error);
+                    expense.receiptUrl = null;
+                }
+            }
+        }
 
         // Handle project breakdown view
         if (view === 'project-breakdown') {

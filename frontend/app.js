@@ -331,6 +331,37 @@ async function getDashboardData() {
 }
 
 // UI Functions
+// Initialize navigation event listeners
+// This function is called from showMainScreen() to ensure nav buttons work after login
+function initializeNavigation() {
+    // Only initialize if nav buttons exist (dashboard page)
+    const navButtons = document.querySelectorAll('.nav-btn');
+    if (navButtons.length === 0) {
+        return; // Not on dashboard page
+    }
+    
+    // Remove any existing listeners by cloning and replacing nodes
+    // This prevents duplicate listeners if function is called multiple times
+    navButtons.forEach(btn => {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+    });
+    
+    // Attach fresh event listeners to all nav buttons
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Settings button navigates to settings.html page
+            if (btn.dataset.view === 'settings') {
+                window.location.href = 'settings.html';
+            } else {
+                switchView(btn.dataset.view);
+            }
+        });
+    });
+    
+    console.log('Navigation initialized: event listeners attached to', navButtons.length, 'buttons');
+}
+
 function showAuthScreen() {
     const authScreen = document.getElementById('auth-screen');
     const mainScreen = document.getElementById('main-screen');
@@ -354,6 +385,9 @@ function showMainScreen() {
     if (document.getElementById('total-expenses')) {
         loadDashboard();
     }
+    
+    // Initialize navigation event listeners (must run after main screen is shown)
+    initializeNavigation();
 }
 
 function switchView(viewName) {
@@ -788,17 +822,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Dashboard-specific initialization
     if (isDashboardPage) {
-        // Navigation
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            // Settings button navigates to settings.html page
-            if (btn.dataset.view === 'settings') {
-                window.location.href = 'settings.html';
-            } else {
-                switchView(btn.dataset.view);
-            }
-        });
-    });
+        // Navigation event listeners are now initialized in initializeNavigation()
+        // which is called from showMainScreen() to work with OAuth login
 
     // Receipt upload
     const uploadArea = document.getElementById('upload-area');

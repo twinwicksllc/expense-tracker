@@ -6,6 +6,7 @@ const client = new DynamoDBClient({ region: 'us-east-1' });
 const docClient = DynamoDBDocumentClient.from(client);
 
 const PROJECTS_TABLE = process.env.PROJECTS_TABLE || 'expense-tracker-projects-prod';
+const TRANSACTIONS_TABLE = process.env.TRANSACTIONS_TABLE || 'expense-tracker-transactions-prod';
 
 // Validation helper
 function validateProjectName(name) {
@@ -84,13 +85,43 @@ async function getProjects(event) {
         projects = projects.filter(p => p.isActive !== false);
     }
     
+    // Fetch all expenses once for aggregation (optimized approach)
+    let allExpenses = [];
+    try {
+        const expensesResult = await docClient.send(new QueryCommand({
+            TableName: TRANSACTIONS_TABLE,
+            IndexName: 'userId-uploadDate-index',
+            KeyConditionExpression: 'userId = :userId',
+            ExpressionAttributeValues: {
+                ':userId': userId
+            }
+        }));
+        allExpenses = expensesResult.Items || [];
+    } catch (error) {
+        console.error('Failed to fetch expenses for aggregation:', error);
+        // Continue without aggregation rather than failing completely
+    }
+    
+    // Aggregate expenses for each project in memory
+    const projectsWithStats = projects.map(project => {
+        const projectExpenses = allExpenses.filter(exp => exp.projectId === project.projectId);
+        const totalAmount = projectExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+        const expenseCount = projectExpenses.length;
+        
+        return {
+            ...project,
+            totalAmount,
+            expenseCount
+        };
+    });
+    
     // Sort by name
-    projects.sort((a, b) => a.name.localeCompare(b.name));
+    projectsWithStats.sort((a, b) => a.name.localeCompare(b.name));
     
     return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(projects)
+        body: JSON.stringify(projectsWithStats)
     };
 }
 

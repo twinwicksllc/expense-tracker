@@ -8,6 +8,7 @@ let currentPeriod = 'mtd';
 let currentGroupBy = 'vendor';
 let chartInstance = null;
 let controlsInitialized = false;
+let projectsCache = null; // Cache for project ID -> name mapping
 
 /**
  * Initialize chart controls (period and grouping buttons)
@@ -180,9 +181,60 @@ function updateComparisonIndicator(elementId, percentChange) {
 }
 
 /**
+ * Fetch projects and create ID -> name mapping cache
+ */
+async function fetchProjectsCache() {
+    if (projectsCache) {
+        return projectsCache; // Return cached version
+    }
+    
+    try {
+        const token = localStorage.getItem('idToken');
+        if (!token) {
+            console.warn('No auth token, cannot fetch projects');
+            return {};
+        }
+        
+        const response = await fetch(`${CONFIG.API_BASE_URL}/projects`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Failed to fetch projects: ${response.status}`);
+        }
+        
+        const projects = await response.json();
+        
+        // Create lookup map: projectId -> projectName
+        const cache = {};
+        projects.forEach(p => {
+            cache[p.projectId] = p.name;
+        });
+        
+        projectsCache = cache;
+        console.log('Projects cache created:', Object.keys(cache).length, 'projects');
+        return cache;
+        
+    } catch (error) {
+        console.error('Failed to fetch projects for mapping:', error);
+        return {}; // Return empty cache on error
+    }
+}
+
+/**
+ * Get project name from project ID
+ */
+function getProjectName(projectId, cache) {
+    if (!projectId || projectId === 'General Business Expense') {
+        return 'General Business Expense';
+    }
+    return cache[projectId] || projectId; // Fallback to UUID if not found
+}
+
+/**
  * Render monthly chart using Chart.js
  */
-function renderMonthlyChart(monthlyData, groupKeys) {
+async function renderMonthlyChart(monthlyData, groupKeys) {
     try {
         console.log('Rendering chart with data:', { monthlyData, groupKeys });
 
@@ -208,14 +260,27 @@ function renderMonthlyChart(monthlyData, groupKeys) {
         // Generate colors for each group
         const colors = generateColors(groupKeys.length);
         
-        // Create datasets for each group key
-        const datasets = groupKeys.map((key, index) => ({
-            label: key,
-            data: monthlyData.map(item => item.breakdown[key] || 0),
-            backgroundColor: colors[index],
-            borderColor: colors[index],
-            borderWidth: 1
-        }));
+        // Fetch project names if grouping by project
+        let projectCache = {};
+        if (currentGroupBy === 'project') {
+            projectCache = await fetchProjectsCache();
+        }
+        
+        // Create datasets for each group key with proper labels
+        const datasets = groupKeys.map((key, index) => {
+            // Map project IDs to names if grouping by project
+            const displayLabel = currentGroupBy === 'project' 
+                ? getProjectName(key, projectCache)
+                : key;
+            
+            return {
+                label: displayLabel,
+                data: monthlyData.map(item => item.breakdown[key] || 0),
+                backgroundColor: colors[index],
+                borderColor: colors[index],
+                borderWidth: 1
+            };
+        });
 
         // Create chart
         const ctx = canvas.getContext('2d');

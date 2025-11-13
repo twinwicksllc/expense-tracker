@@ -159,6 +159,12 @@ body {
     width: 100%;
 }
 
+/* Override width for buttons in view-header (like Add Project button) */
+.view-header .btn-primary {
+    width: auto;
+    min-width: 140px;
+}
+
 .btn-primary:hover {
     background: var(--primary-hover);
 }

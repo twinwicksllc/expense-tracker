@@ -388,6 +388,13 @@ function showMainScreen() {
     
     // Initialize navigation event listeners (must run after main screen is shown)
     initializeNavigation();
+    
+    // Initialize logout button (must run after main screen is shown)
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn && !logoutBtn.dataset.initialized) {
+        logoutBtn.addEventListener('click', logoutWithOAuth);
+        logoutBtn.dataset.initialized = 'true';
+    }
 }
 
 function switchView(viewName) {
@@ -812,12 +819,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             showLoading(false);
         }
     });
-    }
-
-    // Logout (supports both email/password and OAuth)
-    const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', logoutWithOAuth);
     }
 
     // Dashboard-specific initialization

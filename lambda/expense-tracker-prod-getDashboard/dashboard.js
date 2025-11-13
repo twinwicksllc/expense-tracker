@@ -279,6 +279,25 @@ exports.getExpenses = async (event) => {
             });
         }
 
+        // Regenerate presigned URLs for receipts (7 day expiration)
+        for (const expense of expenses) {
+            if (expense.receiptKey) {
+                try {
+                    expense.receiptUrl = await getSignedUrl(
+                        s3Client,
+                        new GetObjectCommand({
+                            Bucket: RECEIPTS_BUCKET,
+                            Key: expense.receiptKey
+                        }),
+                        { expiresIn: 604800 } // 7 days
+                    );
+                } catch (error) {
+                    console.error(`Failed to generate presigned URL for ${expense.receiptKey}:`, error);
+                    expense.receiptUrl = null;
+                }
+            }
+        }
+
         return {
             statusCode: 200,
             headers: {
@@ -602,6 +621,20 @@ exports.deleteExpense = async (event) => {
  */
 exports.getDashboard = async (event) => {
     try {
+        // Handle OPTIONS request for CORS preflight
+        if (event.httpMethod === 'OPTIONS') {
+            return {
+                statusCode: 200,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': 'https://app.twin-wicks.com',
+                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                    'Access-Control-Allow-Methods': 'OPTIONS,GET'
+                },
+                body: JSON.stringify({ message: 'OK' })
+            };
+        }
+
         const userId = getUserId(event);
         if (!userId) {
             return {
@@ -617,8 +650,56 @@ exports.getDashboard = async (event) => {
         }
 
         // Parse query parameters
-        const period = event.queryStringParameters?.period || 'ytd'; // ytd, current_month, last_month
-        const groupBy = event.queryStringParameters?.groupBy || 'vendor'; // vendor, category, project
+        const ALLOWED_PERIODS = ['mtd', 'ytd', 'current_month', 'last_month', '6months', '12months'];
+        const ALLOWED_GROUP_BY = ['vendor', 'category', 'project'];
+        const ALLOWED_VIEWS = ['monthly-chart', 'project-breakdown'];
+        
+        const period = event.queryStringParameters?.period || 'mtd';
+        const view = event.queryStringParameters?.view;
+        const projectId = event.queryStringParameters?.projectId;
+        const groupBy = event.queryStringParameters?.groupBy || 'vendor';
+        
+        // Validate inputs
+        if (!ALLOWED_PERIODS.includes(period)) {
+            return {
+                statusCode: 400,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                    'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
+                },
+                body: JSON.stringify({ message: `Invalid period. Must be one of: ${ALLOWED_PERIODS.join(', ')}` })
+            };
+        }
+        
+        if (!ALLOWED_GROUP_BY.includes(groupBy)) {
+            return {
+                statusCode: 400,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                    'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
+                },
+                body: JSON.stringify({ message: `Invalid groupBy. Must be one of: ${ALLOWED_GROUP_BY.join(', ')}` })
+            };
+        }
+        
+        if (view && !ALLOWED_VIEWS.includes(view)) {
+            return {
+                statusCode: 400,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                    'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
+                },
+                body: JSON.stringify({ message: `Invalid view. Must be one of: ${ALLOWED_VIEWS.join(', ')}` })
+            };
+        }
+        
+        console.log(`Dashboard request: userId=${userId}, period=${period}, groupBy=${groupBy}, view=${view}, projectId=${projectId}`);
 
         // Get all expenses
         const result = await docClient.send(new QueryCommand({
@@ -631,6 +712,96 @@ exports.getDashboard = async (event) => {
         }));
 
         const allExpenses = result.Items || [];
+
+        // Regenerate presigned URLs for all receipts (7 day expiration)
+        for (const expense of allExpenses) {
+            if (expense.receiptKey) {
+                try {
+                    expense.receiptUrl = await getSignedUrl(
+                        s3Client,
+                        new GetObjectCommand({
+                            Bucket: RECEIPTS_BUCKET,
+                            Key: expense.receiptKey
+                        }),
+                        { expiresIn: 604800 } // 7 days
+                    );
+                } catch (error) {
+                    console.error(`Failed to generate presigned URL for ${expense.receiptKey}:`, error);
+                    expense.receiptUrl = null;
+                }
+            }
+        }
+
+        // Handle project breakdown view
+        if (view === 'project-breakdown') {
+            if (!projectId) {
+                return {
+                    statusCode: 400,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*',
+                        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                        'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
+                    },
+                    body: JSON.stringify({ message: 'projectId is required for project-breakdown view' })
+                };
+            }
+
+            // Filter expenses for this project
+            console.log(`Project breakdown request: projectId=${projectId}, total expenses=${allExpenses.length}`);
+            const projectExpenses = allExpenses.filter(exp => exp.projectId === projectId);
+            console.log(`Filtered project expenses: ${projectExpenses.length}`);
+
+            if (projectExpenses.length === 0) {
+                return {
+                    statusCode: 404,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*',
+                        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                        'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
+                    },
+                    body: JSON.stringify({ message: 'Project not found or access denied' })
+                };
+            }
+
+            // Calculate project totals
+            const totalAmount = projectExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+
+            // Group by category
+            const byCategory = {};
+            projectExpenses.forEach(exp => {
+                const cat = exp.category || 'Uncategorized';
+                byCategory[cat] = (byCategory[cat] || 0) + exp.amount;
+            });
+
+            // Group by vendor
+            const byVendor = {};
+            projectExpenses.forEach(exp => {
+                const vendor = exp.vendor || 'Unknown';
+                byVendor[vendor] = (byVendor[vendor] || 0) + exp.amount;
+            });
+
+            const projectBreakdown = {
+                projectId: projectId,
+                totalAmount: totalAmount,
+                expenseCount: projectExpenses.length,
+                byCategory: byCategory,
+                byVendor: byVendor,
+                expenses: projectExpenses.sort((a, b) => new Date(b.date) - new Date(a.date))
+            };
+
+            return {
+                statusCode: 200,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                    'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
+                },
+                body: JSON.stringify(projectBreakdown)
+            };
+        }
 
         // Calculate date ranges
         const now = new Date();
@@ -655,6 +826,29 @@ exports.getDashboard = async (event) => {
             const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
             compareStartDate = new Date(lastMonthYear, lastMonth, 1);
             compareEndDate = new Date(lastMonthYear, lastMonth + 1, 0); // Last day of last month
+        } else if (period === 'mtd') {
+            // Month to date
+            startDate = new Date(currentYear, currentMonth, 1);
+            endDate = now;
+            // Compare to same period last month
+            const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+            const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+            compareStartDate = new Date(lastMonthYear, lastMonth, 1);
+            compareEndDate = new Date(lastMonthYear, lastMonth, now.getDate()); // Same day last month
+        } else if (period === '6months') {
+            // Last 6 months
+            startDate = new Date(currentYear, currentMonth - 5, 1);
+            endDate = now;
+            // Compare to 6 months before that
+            compareStartDate = new Date(currentYear, currentMonth - 11, 1);
+            compareEndDate = new Date(currentYear, currentMonth - 5, 0);
+        } else if (period === '12months') {
+            // Last 12 months
+            startDate = new Date(currentYear, currentMonth - 11, 1);
+            endDate = now;
+            // Compare to 12 months before that
+            compareStartDate = new Date(currentYear - 1, currentMonth - 11, 1);
+            compareEndDate = new Date(currentYear - 1, currentMonth, 0);
         } else if (period === 'last_month') {
             // Last month
             const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
@@ -669,13 +863,14 @@ exports.getDashboard = async (event) => {
         }
 
         // Filter expenses by period
+        console.log(`Filtering ${allExpenses.length} expenses for period=${period}, startDate=${startDate.toISOString()}, endDate=${endDate.toISOString()}`);
         const periodExpenses = allExpenses.filter(exp => {
-            const expDate = new Date(exp.date);
+            const expDate = new Date(exp.transactionDate || exp.date);
             return expDate >= startDate && expDate <= endDate;
         });
 
         const compareExpenses = allExpenses.filter(exp => {
-            const expDate = new Date(exp.date);
+            const expDate = new Date(exp.transactionDate || exp.date);
             return expDate >= compareStartDate && expDate <= compareEndDate;
         });
 
@@ -688,7 +883,7 @@ exports.getDashboard = async (event) => {
         const monthlyData = {};
         
         periodExpenses.forEach(exp => {
-            const expDate = new Date(exp.date);
+            const expDate = new Date(exp.transactionDate || exp.date);
             const monthKey = `${expDate.getFullYear()}-${String(expDate.getMonth() + 1).padStart(2, '0')}`;
             
             if (!monthlyData[monthKey]) {
@@ -702,10 +897,35 @@ exports.getDashboard = async (event) => {
             } else if (groupBy === 'category') {
                 groupKey = exp.category || 'Uncategorized';
             } else if (groupBy === 'project') {
-                groupKey = exp.projectId || 'Business Expenses';
+                groupKey = exp.projectId || 'General Business Expense';
             }
 
             monthlyData[monthKey][groupKey] = (monthlyData[monthKey][groupKey] || 0) + exp.amount;
+        
+        // For MTD period, also group comparison (prior month) expenses
+        const priorMonthData = {};
+        if (period === 'mtd') {
+            compareExpenses.forEach(exp => {
+                const expDate = new Date(exp.transactionDate || exp.date);
+                const monthKey = `${expDate.getFullYear()}-${String(expDate.getMonth() + 1).padStart(2, '0')}`;
+                
+                if (!priorMonthData[monthKey]) {
+                    priorMonthData[monthKey] = {};
+                }
+    
+                // Determine grouping key
+                let groupKey;
+                if (groupBy === 'vendor') {
+                    groupKey = exp.vendor || 'Unknown';
+                } else if (groupBy === 'category') {
+                    groupKey = exp.category || 'Uncategorized';
+                } else if (groupBy === 'project') {
+                    groupKey = exp.projectId || 'General Business Expense';
+                }
+    
+                priorMonthData[monthKey][groupKey] = (priorMonthData[monthKey][groupKey] || 0) + exp.amount;
+            });
+        }
         });
 
         // Convert monthly data to array format for charting
@@ -744,14 +964,14 @@ exports.getDashboard = async (event) => {
         // Calculate project breakdown for current period
         const projectTotals = {};
         periodExpenses.forEach(exp => {
-            const project = exp.projectId || 'Business Expenses';
+            const project = exp.projectId || 'General Business Expense';
             projectTotals[project] = (projectTotals[project] || 0) + exp.amount;
         });
 
         // Calculate current month total for the stats card
         const currentMonthTotal = periodExpenses
             .filter(exp => {
-                const d = new Date(exp.date);
+                const d = new Date(exp.transactionDate || exp.date);
                 return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
             })
             .reduce((sum, exp) => sum + exp.amount, 0);
@@ -773,6 +993,7 @@ exports.getDashboard = async (event) => {
                 countChange: Math.round(countChangePercent * 10) / 10
             },
             monthlyData: monthlyChartData,
+               priorMonthData: priorMonthChartData,
             groupKeys: Array.from(allGroupKeys).sort(),
             breakdowns: {
                 byCategory: categoryTotals,

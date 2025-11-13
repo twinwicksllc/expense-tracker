@@ -942,11 +942,32 @@ exports.getDashboard = async (event) => {
                 };
             });
 
+           
+           // For MTD, add prior month data to chart
+           const priorMonthChartData = period === 'mtd' ? Object.keys(priorMonthData)
+               .sort()
+               .map(monthKey => {
+                   const [year, month] = monthKey.split('-');
+                   const monthName = new Date(year, parseInt(month) - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                   
+                   return {
+                       month: monthName + ' (Prior)',
+                       monthKey: monthKey,
+                       breakdown: priorMonthData[monthKey]
+                   };
+               }) : [];
         // Get all unique group keys for the legend
         const allGroupKeys = new Set();
         Object.values(monthlyData).forEach(monthData => {
             Object.keys(monthData).forEach(key => allGroupKeys.add(key));
         });
+           
+           // Add prior month group keys for MTD
+           if (period === 'mtd') {
+               Object.values(priorMonthData).forEach(monthData => {
+                   Object.keys(monthData).forEach(key => allGroupKeys.add(key));
+               });
+           }
 
         // Calculate category breakdown for current period
         const categoryTotals = {};

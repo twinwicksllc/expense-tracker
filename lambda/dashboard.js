@@ -901,6 +901,31 @@ exports.getDashboard = async (event) => {
             }
 
             monthlyData[monthKey][groupKey] = (monthlyData[monthKey][groupKey] || 0) + exp.amount;
+        
+        // For MTD period, also group comparison (prior month) expenses
+        const priorMonthData = {};
+        if (period === 'mtd') {
+            compareExpenses.forEach(exp => {
+                const expDate = new Date(exp.transactionDate || exp.date);
+                const monthKey = `${expDate.getFullYear()}-${String(expDate.getMonth() + 1).padStart(2, '0')}`;
+                
+                if (!priorMonthData[monthKey]) {
+                    priorMonthData[monthKey] = {};
+                }
+    
+                // Determine grouping key
+                let groupKey;
+                if (groupBy === 'vendor') {
+                    groupKey = exp.vendor || 'Unknown';
+                } else if (groupBy === 'category') {
+                    groupKey = exp.category || 'Uncategorized';
+                } else if (groupBy === 'project') {
+                    groupKey = exp.projectId || 'General Business Expense';
+                }
+    
+                priorMonthData[monthKey][groupKey] = (priorMonthData[monthKey][groupKey] || 0) + exp.amount;
+            });
+        }
         });
 
         // Convert monthly data to array format for charting
@@ -968,6 +993,7 @@ exports.getDashboard = async (event) => {
                 countChange: Math.round(countChangePercent * 10) / 10
             },
             monthlyData: monthlyChartData,
+               priorMonthData: priorMonthChartData,
             groupKeys: Array.from(allGroupKeys).sort(),
             breakdowns: {
                 byCategory: categoryTotals,

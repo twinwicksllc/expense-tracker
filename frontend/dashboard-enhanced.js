@@ -93,7 +93,7 @@ async function updateDashboard() {
         updateDashboardStats(data);
 
         // Update chart
-        renderMonthlyChart(data.monthlyData, data.groupKeys);
+        renderMonthlyChart(data.monthlyData, data.groupKeys, data.priorMonthData);
 
     } catch (error) {
         console.error('Dashboard update error:', error);
@@ -129,7 +129,7 @@ async function updateMonthlyChart() {
         console.log('Chart data received:', data);
 
         // Update chart only
-        renderMonthlyChart(data.monthlyData, data.groupKeys);
+        renderMonthlyChart(data.monthlyData, data.groupKeys, data.priorMonthData);
 
     } catch (error) {
         console.error('Chart update error:', error);
@@ -182,9 +182,9 @@ function updateComparisonIndicator(elementId, percentChange) {
 /**
  * Render monthly chart using Chart.js
  */
-function renderMonthlyChart(monthlyData, groupKeys) {
+function renderMonthlyChart(monthlyData, groupKeys, priorMonthData) {
     try {
-        console.log('Rendering chart with data:', { monthlyData, groupKeys });
+        console.log('Rendering chart with data:', { monthlyData, groupKeys, priorMonthData });
 
         if (!monthlyData || monthlyData.length === 0) {
             console.warn('No monthly data to display');
@@ -211,7 +211,7 @@ function renderMonthlyChart(monthlyData, groupKeys) {
         // Create datasets for each group key
         const datasets = groupKeys.map((key, index) => ({
             label: key,
-            data: monthlyData.map(item => item.breakdown[key] || 0),
+            data: combinedData.map(item => item.breakdown[key] || 0),
             backgroundColor: colors[index],
             borderColor: colors[index],
             borderWidth: 1

@@ -901,7 +901,8 @@ exports.getDashboard = async (event) => {
             }
 
             monthlyData[monthKey][groupKey] = (monthlyData[monthKey][groupKey] || 0) + exp.amount;
-        
+        });
+
         // For MTD period, also group comparison (prior month) expenses
         const priorMonthData = {};
         if (period === 'mtd') {
@@ -926,7 +927,6 @@ exports.getDashboard = async (event) => {
                 priorMonthData[monthKey][groupKey] = (priorMonthData[monthKey][groupKey] || 0) + exp.amount;
             });
         }
-        });
 
         // Convert monthly data to array format for charting
         const monthlyChartData = Object.keys(monthlyData)
@@ -941,9 +941,8 @@ exports.getDashboard = async (event) => {
                     breakdown: monthlyData[monthKey]
                 };
             });
-
            
-           // For MTD, add prior month data to chart
+           // For MTD, convert prior month data to chart format
            const priorMonthChartData = period === 'mtd' ? Object.keys(priorMonthData)
                .sort()
                .map(monthKey => {
@@ -956,6 +955,7 @@ exports.getDashboard = async (event) => {
                        breakdown: priorMonthData[monthKey]
                    };
                }) : [];
+
         // Get all unique group keys for the legend
         const allGroupKeys = new Set();
         Object.values(monthlyData).forEach(monthData => {

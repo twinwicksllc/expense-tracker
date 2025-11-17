@@ -830,8 +830,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const uploadArea = document.getElementById('upload-area');
     const receiptInput = document.getElementById('receipt-input');
 
-    uploadArea.addEventListener('click', () => receiptInput.click());
-
+    // File input change handler (label handles click natively for mobile compatibility)
     receiptInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) {
             handleReceiptUpload(e.target.files[0]);

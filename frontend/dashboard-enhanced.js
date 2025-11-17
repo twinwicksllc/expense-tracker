@@ -295,12 +295,22 @@ async function renderMonthlyChart(monthlyData, groupKeys) {
                 maintainAspectRatio: false,
                 scales: {
                     x: {
-                        stacked: true
+                        stacked: true,
+                        ticks: {
+                            font: {
+                                size: window.innerWidth < 768 ? 9 : 11
+                            },
+                            maxRotation: window.innerWidth < 768 ? 45 : 0,
+                            minRotation: window.innerWidth < 768 ? 45 : 0
+                        }
                     },
                     y: {
                         stacked: true,
                         beginAtZero: true,
                         ticks: {
+                            font: {
+                                size: window.innerWidth < 768 ? 9 : 11
+                            },
                             callback: function(value) {
                                 return '$' + value.toLocaleString();
                             }
@@ -309,9 +319,21 @@ async function renderMonthlyChart(monthlyData, groupKeys) {
                 },
                 plugins: {
                     legend: {
-                        position: 'bottom'
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            font: {
+                                size: window.innerWidth < 768 ? 10 : 12
+                            }
+                        }
                     },
                     tooltip: {
+                        titleFont: {
+                            size: window.innerWidth < 768 ? 11 : 13
+                        },
+                        bodyFont: {
+                            size: window.innerWidth < 768 ? 10 : 12
+                        },
                         callbacks: {
                             label: function(context) {
                                 return context.dataset.label + ': $' + context.parsed.y.toFixed(2);
@@ -387,6 +409,13 @@ window.dashboardEnhanced = {
     updateDashboard,
     updateMonthlyChart
 };
+
+// Add window resize listener for chart responsiveness
+window.addEventListener('resize', () => {
+    if (chartInstance) {
+        chartInstance.resize();
+    }
+});
 
 console.log('Dashboard enhancements loaded');
 

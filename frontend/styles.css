@@ -1031,3 +1031,35 @@ body {
     font-size: 13px;
     font-weight: 500;
 }
+
+
+/* Chart Container - Responsive */
+.chart-container {
+    position: relative;
+    height: 400px;
+    width: 100%;
+}
+
+/* Upload Area Label - Mobile Support */
+.upload-area-label {
+    display: block;
+    cursor: pointer;
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+    .chart-container {
+        height: 300px; /* Shorter height for mobile */
+        width: 100%;
+        padding: 0 10px; /* Add padding for mobile */
+    }
+    
+    .upload-area {
+        min-height: 150px; /* Larger touch target on mobile */
+        padding: 20px;
+    }
+    
+    .upload-area p {
+        font-size: 14px; /* Larger text for mobile */
+    }
+}

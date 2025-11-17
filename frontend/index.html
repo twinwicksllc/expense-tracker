@@ -213,7 +213,7 @@
                         </div>
                         
                         <!-- Chart Canvas -->
-                        <div style="position: relative; height: 400px;">
+                        <div class="chart-container">
                             <canvas id="monthly-chart"></canvas>
                         </div>
                     </div>
@@ -277,15 +277,17 @@
                     <h2>Add New Expense</h2>
                     
                     <div class="upload-section">
-                        <div class="upload-area" id="upload-area">
-                            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="17 8 12 3 7 8"></polyline>
-                                <line x1="12" y1="3" x2="12" y2="15"></line>
-                            </svg>
-                            <p>Drag & drop receipt (image, PDF, or Word doc) here or click to browse</p>
-                            <input type="file" id="receipt-input" accept="image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display: none;">
-                        </div>
+                        <label for="receipt-input" class="upload-area-label">
+                            <div id="upload-area" class="upload-area">
+                                <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                                <p>Tap to select receipt (image, PDF, or Word doc)</p>
+                            </div>
+                        </label>
+                        <input type="file" id="receipt-input" accept="image/*,application/pdf,.pdf,.doc,.docx" style="position: absolute; opacity: 0; width: 0.1px; height: 0.1px; z-index: -1;">
                         
                         <div id="preview-section" style="display: none;">
                             <img id="receipt-preview" alt="Receipt preview">

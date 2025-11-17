@@ -71,6 +71,32 @@ function validateExpenseForm(data) {
     };
 }
 
+function showDebugMessage(message) {
+    let debugDiv = document.getElementById('mobile-debug');
+    if (!debugDiv) {
+        debugDiv = document.createElement('div');
+        debugDiv.id = 'mobile-debug';
+        debugDiv.style.cssText = `
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #ff6b6b;
+            color: white;
+            padding: 10px;
+            font-size: 12px;
+            z-index: 9999;
+            font-family: monospace;
+            max-height: 100px;
+            overflow-y: auto;
+        `;
+        document.body.appendChild(debugDiv);
+    }
+    const timestamp = new Date().toLocaleTimeString();
+    debugDiv.textContent = `[${timestamp}] ${message}`;
+    console.log('[DEBUG]', message);
+}
+
 function showError(elementId, message) {
     const element = document.getElementById(elementId);
     if (!element) {
@@ -595,17 +621,54 @@ function resetExpenseForm() {
 }
 
 async function handleReceiptUpload(file) {
-    const allowedTypes = [
-        'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+    console.log('[DEBUG] handleReceiptUpload called');
+    showDebugMessage('Processing file...');
+    
+    // Validate file exists
+    if (!file) {
+        const error = 'No file provided';
+        console.error('[DEBUG]', error);
+        showDebugMessage(`ERROR: ${error}`);
+        showError('expense-error', error);
+        return;
+    }
+    
+    // File size validation (10MB limit)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+        const error = `File too large: ${(file.size / 1024 / 1024).toFixed(2)}MB (max 10MB)`;
+        console.error('[DEBUG]', error);
+        showDebugMessage(`ERROR: ${error}`);
+        showError('expense-error', error);
+        return;
+    }
+    
+    // File type validation (check both MIME type and extension for mobile compatibility)
+    const allowedMimeTypes = [
+        'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/heic',
         'application/pdf',
         'application/msword',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     ];
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.pdf', '.doc', '.docx'];
     
-    if (!file || !allowedTypes.includes(file.type)) {
+    const fileName = file.name.toLowerCase();
+    const fileExt = fileName.substring(fileName.lastIndexOf('.'));
+    const isValidMimeType = allowedMimeTypes.includes(file.type);
+    const isValidExtension = allowedExtensions.includes(fileExt);
+    
+    console.log('[DEBUG] File validation:', { type: file.type, ext: fileExt, validMime: isValidMimeType, validExt: isValidExtension });
+    
+    if (!isValidMimeType && !isValidExtension) {
+        const error = `Invalid file type: ${file.type || 'unknown'} (${fileExt})`;
+        console.error('[DEBUG]', error);
+        showDebugMessage(`ERROR: ${error}`);
         showError('expense-error', 'Please upload an image, PDF, or Word document');
         return;
     }
+    
+    showDebugMessage('File validated, showing preview...');
+    console.log('[DEBUG] File validation passed');
 
     // Show preview (only for images)
     if (file.type.startsWith('image/')) {
@@ -631,8 +694,13 @@ async function handleReceiptUpload(file) {
 
     // Parse receipt
     try {
+        console.log('[DEBUG] Starting receipt parsing...');
+        showDebugMessage('Parsing receipt with AI...');
         document.getElementById('parsing-status').style.display = 'block';
         const parsed = await parseReceipt(file);
+        
+        console.log('[DEBUG] Receipt parsed:', parsed);
+        showDebugMessage('Receipt parsed successfully!');
         
         // Store s3Key in state for later use
         state.currentReceiptS3Key = parsed.s3Key;
@@ -645,7 +713,8 @@ async function handleReceiptUpload(file) {
         
         document.getElementById('parsing-status').style.display = 'none';
     } catch (error) {
-        console.error('Failed to parse receipt:', error);
+        console.error('[DEBUG] Failed to parse receipt:', error);
+        showDebugMessage(`Parse error: ${error.message}`);
         document.getElementById('parsing-status').style.display = 'none';
         // Continue anyway - user can fill in manually
     }
@@ -831,9 +900,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     const receiptInput = document.getElementById('receipt-input');
 
     // File input change handler (label handles click natively for mobile compatibility)
-    receiptInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            handleReceiptUpload(e.target.files[0]);
+    receiptInput.addEventListener('change', async (e) => {
+        console.log('[DEBUG] File input change event fired');
+        console.log('[DEBUG] Files selected:', e.target.files.length);
+        
+        try {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                console.log('[DEBUG] File details:', {
+                    name: file.name,
+                    type: file.type,
+                    size: file.size
+                });
+                showDebugMessage(`File selected: ${file.name} (${file.type})`);
+                await handleReceiptUpload(file);
+            } else {
+                console.log('[DEBUG] No files selected');
+                showDebugMessage('No files selected');
+            }
+        } catch (error) {
+            console.error('[DEBUG] Error in file upload:', error);
+            showDebugMessage(`ERROR: ${error.message}`);
+            showError('expense-error', `Upload failed: ${error.message}`);
         }
     });
 

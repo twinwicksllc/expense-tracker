@@ -11,7 +11,7 @@ function signInWithGoogle() {
         redirect_uri: CONFIG.COGNITO.REDIRECT_URI,
         response_type: 'code',
         client_id: CONFIG.COGNITO.CLIENT_ID,
-        scope: 'openid email profile aws.cognito.signin.user.admin'
+        scope: 'openid email profile'
     });
 
     const authUrl = `${CONFIG.COGNITO.DOMAIN}/oauth2/authorize?${params.toString()}`;

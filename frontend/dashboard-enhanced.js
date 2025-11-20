@@ -211,7 +211,7 @@ function renderMonthlyChart(monthlyData, groupKeys, priorMonthData) {
         // Create datasets for each group key
         const datasets = groupKeys.map((key, index) => ({
             label: key,
-            data: combinedData.map(item => item.breakdown[key] || 0),
+            data: monthlyData.map(item => item.breakdown[key] || 0),
             backgroundColor: colors[index],
             borderColor: colors[index],
             borderWidth: 1

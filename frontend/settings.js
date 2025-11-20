@@ -3,7 +3,7 @@
 const API_GATEWAY_URL = 'https://fcnq8h7mai.execute-api.us-east-1.amazonaws.com/prod';
 const COGNITO_DOMAIN = 'https://expense-tracker-prod.auth.us-east-1.amazoncognito.com';
 const CLIENT_ID = 'pk3l1fkkre0ms4si0prabfavl';
-const REDIRECT_URI = 'https://app.twin-wicks.com/settings.html';
+const REDIRECT_URI = 'https://teckstart.com/settings.html';
 
 // Check if user is logged in
 document.addEventListener('DOMContentLoaded', async () => {

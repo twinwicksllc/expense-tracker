@@ -238,7 +238,7 @@ exports.handler = async (event) => {
             statusCode: 200,
             headers: {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': 'https://app.twin-wicks.com',
+                'Access-Control-Allow-Origin': 'https://teckstart.com',
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                 'Access-Control-Allow-Methods': 'OPTIONS,GET',
                 'Access-Control-Allow-Credentials': 'true'
@@ -256,7 +256,7 @@ exports.handler = async (event) => {
             statusCode: error.message.includes('Invalid') ? 400 : 500,
             headers: {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': 'https://app.twin-wicks.com',
+                'Access-Control-Allow-Origin': 'https://teckstart.com',
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                 'Access-Control-Allow-Methods': 'OPTIONS,GET',
                 'Access-Control-Allow-Credentials': 'true'

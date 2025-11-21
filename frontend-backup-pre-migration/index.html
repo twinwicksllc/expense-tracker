@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker - Freelancer Edition</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="shortcut icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" href="favicon.png">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="settings-styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Auth Screen -->
+        <div id="auth-screen" class="screen">
+            <div class="auth-container">
+                <a href="https://twin-wicks.com" target="_blank" rel="noopener noreferrer">
+                    <img src="twin-wicks-logo.png" alt="Twin Wicks Digital Solutions" class="logo" style="width: 240px; height: 240px; object-fit: contain; margin-bottom: 8px;">
+                </a>
+                <h1>Expense Tracker</h1>
+                <p class="subtitle">Track your freelance expenses with AI-powered receipt parsing</p>
+                
+                <div class="auth-tabs">
+                    <button class="tab-btn active" data-tab="login">Login</button>
+                    <button class="tab-btn" data-tab="signup">Sign Up</button>
+                </div>
+
+                <!-- Login Form -->
+                <form id="login-form" class="auth-form active">
+                    <div class="form-group">
+                        <label for="login-email">Email</label>
+                        <input type="email" id="login-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <input type="password" id="login-password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                    <div class="error-message" id="login-error"></div>
+                    
+                    <div class="auth-divider">
+                        <span>OR</span>
+                    </div>
+                    
+                    <button type="button" class="btn btn-google" id="google-signin-btn" onclick="signInWithGoogle()">
+                        <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+                            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                            <path fill="none" d="M0 0h48v48H0z"/>
+                        </svg>
+                        Sign in with Google
+                    </button>
+                </form>
+
+                <!-- Signup Form -->
+                <form id="signup-form" class="auth-form">
+                    <div class="form-group">
+                        <label for="signup-email">Email</label>
+                        <input type="email" id="signup-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-password">Password</label>
+                        <input type="password" id="signup-password" required minlength="8">
+                        <small>Minimum 8 characters</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-confirm">Confirm Password</label>
+                        <input type="password" id="signup-confirm" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Sign Up</button>
+                    <div class="error-message" id="signup-error"></div>
+                    <div class="success-message" id="signup-success"></div>
+                    
+                    <div class="auth-divider">
+                        <span>OR</span>
+                    </div>
+                    
+                    <button type="button" class="btn btn-google" id="google-signup-btn" onclick="signInWithGoogle()">
+                        <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+                            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                            <path fill="none" d="M0 0h48v48H0z"/>
+                        </svg>
+                        Sign up with Google
+                    </button>
+                </form>
+
+                <!-- Confirmation Form -->
+                <div id="confirmation-section" style="display: none; margin-top: 20px; padding: 20px; background: #f0f9ff; border-radius: 8px;">
+                    <h3 style="margin-top: 0;">Confirm Your Email</h3>
+                    <p>We've sent a confirmation code to your email. Please enter it below:</p>
+                    <form id="confirm-form">
+                        <input type="hidden" id="confirmation-email">
+                        <div class="form-group">
+                            <label for="confirmation-code">Confirmation Code</label>
+                            <input type="text" id="confirmation-code" required placeholder="Enter 6-digit code">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Confirm Email</button>
+                        <div class="error-message" id="confirm-error"></div>
+                        <div class="success-message" id="confirm-success"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main App Screen -->
+        <div id="main-screen" class="screen" style="display: none;">
+            <!-- Header -->
+            <header class="app-header">
+                <div class="container">
+                    <div class="header-brand">
+                        <a href="https://twin-wicks.com" target="_blank" rel="noopener noreferrer">
+                            <img src="twin-wicks-logo.png" alt="Twin Wicks Digital Solutions" class="header-logo" style="width: 105px; height: 105px; object-fit: contain;">
+                        </a>
+                        <h1>Expense Tracker</h1>
+                    </div>
+                    <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle menu">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
+                    <div class="header-actions">
+                        <span id="user-email" class="user-info"></span>
+                        <button id="logout-btn" class="btn btn-secondary">Logout</button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Error Message Container -->
+            <div id="error-message" class="error-message"></div>
+
+            <!-- Navigation -->
+            <nav class="app-nav" id="app-nav">
+                <div class="container">
+                    <button class="nav-btn active" data-view="dashboard">Dashboard</button>
+                    <button class="nav-btn" data-view="expenses">Expenses</button>
+                    <button class="nav-btn" data-view="projects">Projects</button>
+                    <button class="nav-btn" data-view="add-expense">Add Expense</button>
+                    <button class="nav-btn" data-view="settings">Settings</button>
+                </div>
+            </nav>
+
+            <!-- Dashboard View -->
+            <div id="dashboard-view" class="view active">
+                <div class="container">
+                    <h2>Expense Dashboard</h2>
+                    
+                    <!-- Period Toggle -->
+                    <div class="period-toggle" style="margin-bottom: 20px; text-align: center;">
+                        <button data-period="mtd" class="period-btn">Month to Date</button>
+                        <button data-period="ytd" class="period-btn">Year to Date</button>
+                        <button data-period="6months" class="period-btn">Last 6 Months</button>
+                        <button data-period="12months" class="period-btn">Last 12 Months</button>
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Total Expenses</h3>
+                            <p class="stat-value" id="total-expenses">$0.00</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>This Month</h3>
+                            <p class="stat-value" id="month-expenses">$0.00</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Transaction Count</h3>
+                            <p class="stat-value" id="transaction-count">0</p>
+                        </div>
+                    </div>
+
+                    <div class="chart-container">
+                        <h3>Expenses by Category</h3>
+                        <div id="category-chart" class="category-chart"></div>
+                    </div>
+                    
+                    <!-- Monthly Spending Trends -->
+                    <div class="chart-container" style="margin-top: 30px;">
+                        <h3>Monthly Spending Trends</h3>
+                        
+                        <!-- Chart Grouping Controls -->
+                        <div class="chart-controls" style="margin-bottom: 15px; text-align: center;">
+                            <button data-groupby="vendor" class="groupby-btn">By Vendor</button>
+                            <button data-groupby="category" class="groupby-btn">By Category</button>
+                            <button data-groupby="project" class="groupby-btn">By Project</button>
+                        </div>
+                        
+                        <!-- Chart Canvas -->
+                        <div style="position: relative; height: 400px;">
+                            <canvas id="monthly-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expenses List View -->
+            <div id="expenses-view" class="view">
+                <div class="container">
+                    <div class="view-header">
+                        <h2>All Expenses</h2>
+                        <div class="filters">
+                            <select id="sort-by">
+                                <option value="uploadDate-desc">Newest First (Upload Date)</option>
+                                <option value="uploadDate-asc">Oldest First (Upload Date)</option>
+                                <option value="transactionDate-desc">Transaction Date (Newest)</option>
+                                <option value="transactionDate-asc">Transaction Date (Oldest)</option>
+                                <option value="amount-desc">Highest Amount</option>
+                                <option value="amount-asc">Lowest Amount</option>
+                            </select>
+                            <select id="filter-category">
+                                <option value="">All Categories</option>
+                                <option value="Office Supplies">Office Supplies</option>
+                                <option value="Travel">Travel</option>
+                                <option value="Meals">Meals</option>
+                                <option value="Software">Software</option>
+                                <option value="Equipment">Equipment</option>
+                                <option value="Marketing">Marketing</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <select id="filter-project">
+                                <option value="">All Projects</option>
+                                <!-- Projects will be loaded dynamically -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="expenses-list" class="expenses-list">
+                        <!-- Expenses will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Projects View -->
+            <div id="projects-view" class="view">
+                <div class="container">
+                    <div class="view-header">
+                        <h2>Projects</h2>
+                        <button id="add-project-btn" class="btn btn-primary">+ Add Project</button>
+                    </div>
+                    
+                    <div id="projects-list" class="projects-list">
+                        <!-- Projects will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Expense View -->
+            <div id="add-expense-view" class="view">
+                <div class="container">
+                    <h2>Add New Expense</h2>
+                    
+                    <div class="upload-section">
+                        <div class="upload-area" id="upload-area">
+                            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <p>Drag & drop receipt (image, PDF, or Word doc) here or click to browse</p>
+                            <input type="file" id="receipt-input" accept="image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display: none;">
+                        </div>
+                        
+                        <div id="preview-section" style="display: none;">
+                            <img id="receipt-preview" alt="Receipt preview">
+                            <button id="remove-receipt" class="btn btn-secondary">Remove</button>
+                        </div>
+                    </div>
+
+                    <div id="parsing-status" class="parsing-status" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>Parsing receipt with AI...</p>
+                    </div>
+
+                    <form id="expense-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="expense-vendor">Vendor *</label>
+                                <input type="text" id="expense-vendor" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="expense-amount">Amount *</label>
+                                <input type="number" id="expense-amount" step="0.01" min="0" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="expense-date">Date *</label>
+                                <input type="date" id="expense-date" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="expense-category">Category *</label>
+                                <select id="expense-category" required>
+                                    <option value="">Select category</option>
+                                    <option value="Office Supplies">Office Supplies</option>
+                                    <option value="Travel">Travel</option>
+                                    <option value="Meals">Meals</option>
+                                    <option value="Software">Software</option>
+                                    <option value="Equipment">Equipment</option>
+                                    <option value="Marketing">Marketing</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="expense-project">Project (Optional)</label>
+                            <select id="expense-project">
+                                <option value="">No Project</option>
+                                <!-- Projects will be loaded dynamically -->
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="expense-description">Description</label>
+                            <textarea id="expense-description" rows="3"></textarea>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Save Expense</button>
+                            <button type="button" id="cancel-expense" class="btn btn-secondary">Cancel</button>
+                        </div>
+
+                        <div class="error-message" id="expense-error"></div>
+                        <div class="success-message" id="expense-success"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings View -->
+        <div id="settings-view" class="view">
+            <div class="container">
+                <h2>Settings</h2>
+                
+                <div class="settings-section">
+                    <h3>AWS Cost Tracking</h3>
+                    <p class="settings-description">Connect your AWS account to automatically import monthly cost data as expenses.</p>
+                    
+                    <div id="aws-credentials-status" class="credential-status">
+                        <!-- Status will be loaded here -->
+                    </div>
+                    
+                    <div id="aws-credentials-form" class="credentials-form" style="display: none;">
+                        <div class="form-group">
+                            <label for="aws-access-key">AWS Access Key ID *</label>
+                            <input type="text" id="aws-access-key" placeholder="AKIA..." required>
+                            <small>Your AWS IAM access key with Cost Explorer read permissions</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="aws-secret-key">AWS Secret Access Key *</label>
+                            <input type="password" id="aws-secret-key" placeholder="Enter secret key" required>
+                            <small>This will be encrypted and stored securely</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="aws-region">AWS Region</label>
+                            <select id="aws-region">
+                                <optgroup label="North America">
+                                    <option value="us-east-1">US East (N. Virginia)</option>
+                                    <option value="us-east-2">US East (Ohio)</option>
+                                    <option value="us-west-1">US West (N. California)</option>
+                                    <option value="us-west-2">US West (Oregon)</option>
+                                    <option value="ca-central-1">Canada (Central)</option>
+                                    <option value="ca-west-1">Canada West (Calgary)</option>
+                                    <option value="us-gov-east-1">AWS GovCloud (US-East)</option>
+                                    <option value="us-gov-west-1">AWS GovCloud (US-West)</option>
+                                </optgroup>
+                                <optgroup label="South America">
+                                    <option value="sa-east-1">South America (São Paulo)</option>
+                                </optgroup>
+                                <optgroup label="Europe">
+                                    <option value="eu-central-1">Europe (Frankfurt)</option>
+                                    <option value="eu-west-1">Europe (Ireland)</option>
+                                    <option value="eu-west-2">Europe (London)</option>
+                                    <option value="eu-west-3">Europe (Paris)</option>
+                                    <option value="eu-south-1">Europe (Milan)</option>
+                                    <option value="eu-north-1">Europe (Stockholm)</option>
+                                    <option value="eu-south-2">Europe (Spain)</option>
+                                    <option value="eu-central-2">Europe (Zurich)</option>
+                                </optgroup>
+                                <optgroup label="Middle East">
+                                    <option value="me-south-1">Middle East (Bahrain)</option>
+                                    <option value="me-central-1">Middle East (UAE)</option>
+                                    <option value="il-central-1">Middle East (Tel Aviv)</option>
+                                </optgroup>
+                                <optgroup label="Africa">
+                                    <option value="af-south-1">Africa (Cape Town)</option>
+                                </optgroup>
+                                <optgroup label="Asia Pacific">
+                                    <option value="ap-northeast-1">Asia Pacific (Tokyo)</option>
+                                    <option value="ap-northeast-2">Asia Pacific (Seoul)</option>
+                                    <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
+                                    <option value="ap-southeast-2">Asia Pacific (Sydney)</option>
+                                    <option value="ap-south-1">Asia Pacific (Mumbai)</option>
+                                    <option value="ap-northeast-3">Asia Pacific (Osaka)</option>
+                                    <option value="ap-east-1">Asia Pacific (Hong Kong)</option>
+                                    <option value="ap-southeast-3">Asia Pacific (Jakarta)</option>
+                                    <option value="ap-southeast-4">Asia Pacific (Melbourne)</option>
+                                    <option value="ap-south-2">Asia Pacific (Hyderabad)</option>
+                                    <option value="ap-southeast-5">Asia Pacific (Malaysia)</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group" id="iam-arn-display" style="display: none;">
+                            <label>IAM User ARN</label>
+                            <div class="arn-display">
+                                <code id="iam-arn-value"></code>
+                                <button type="button" id="copy-arn" class="btn-copy" title="Copy ARN">📋</button>
+                            </div>
+                            <small>This is your IAM user's Amazon Resource Name</small>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" id="save-aws-credentials" class="btn btn-primary">Save Credentials</button>
+                            <button type="button" id="cancel-aws-credentials" class="btn btn-secondary">Cancel</button>
+                        </div>
+                        
+                        <div class="error-message" id="aws-credentials-error"></div>
+                        <div class="success-message" id="aws-credentials-success"></div>
+                    </div>
+                    
+                    <div class="info-box setup-instructions">
+                        <h4>📋 Step-by-Step: Create an IAM User for Cost Tracking</h4>
+                        <ol class="setup-steps">
+                            <li>
+                                <strong>Open AWS IAM Console</strong>
+                                <p>Go to <a href="https://console.aws.amazon.com/iam/" target="_blank">AWS IAM Console</a> and sign in to your AWS account.</p>
+                            </li>
+                            <li>
+                                <strong>Create a New IAM User</strong>
+                                <p>Click "Users" in the left sidebar, then click "Create user".</p>
+                                <p>Enter a username like <code>expense-tracker-cost-reader</code>.</p>
+                            </li>
+                            <li>
+                                <strong>Set Permissions</strong>
+                                <p>Select "Attach policies directly" and click "Create policy".</p>
+                                <p>In the JSON tab, paste this policy:</p>
+                                <pre><code>{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ce:GetCostAndUsage",
+        "ce:GetCostForecast"
+      ],
+      "Resource": "*"
+    }
+  ]
+}</code></pre>
+                                <p>Name it <code>CostExplorerReadOnly</code> and create the policy.</p>
+                            </li>
+                            <li>
+                                <strong>Attach the Policy</strong>
+                                <p>Go back to user creation, refresh policies, and attach <code>CostExplorerReadOnly</code>.</p>
+                            </li>
+                            <li>
+                                <strong>Create Access Keys</strong>
+                                <p>After creating the user, click on the user name, go to "Security credentials" tab.</p>
+                                <p>Click "Create access key", select "Application running outside AWS", and click "Create".</p>
+                            </li>
+                            <li>
+                                <strong>Save Your Credentials</strong>
+                                <p>Copy the <strong>Access Key ID</strong> and <strong>Secret Access Key</strong>.</p>
+                                <p class="warning-text">⚠️ This is the only time you'll see the secret key! Save it securely.</p>
+                            </li>
+                            <li>
+                                <strong>Enter Credentials Above</strong>
+                                <p>Paste your Access Key ID and Secret Access Key in the form above and click "Save Credentials".</p>
+                            </li>
+                        </ol>
+                    </div>
+                    
+                    <div class="info-box">
+                        <h4>🔒 Security & Privacy</h4>
+                        <ul>
+                            <li>Your Secret Access Key is encrypted using AES-256-GCM before storage</li>
+                            <li>The IAM user only has read-only access to cost data</li>
+                            <li>No other AWS resources can be accessed with these credentials</li>
+                            <li>You can revoke access anytime by deleting the IAM user in AWS</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Expense Modal -->
+        <div id="edit-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Edit Expense</h2>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <form id="edit-expense-form">
+                    <input type="hidden" id="edit-transaction-id">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit-vendor">Vendor *</label>
+                            <input type="text" id="edit-vendor" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-amount">Amount *</label>
+                            <input type="number" id="edit-amount" step="0.01" min="0" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit-date">Date *</label>
+                            <input type="date" id="edit-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-category">Category *</label>
+                            <select id="edit-category" required>
+                                <option value="">Select category</option>
+                                <option value="Office Supplies">Office Supplies</option>
+                                <option value="Travel">Travel</option>
+                                <option value="Meals">Meals</option>
+                                <option value="Software">Software</option>
+                                <option value="Equipment">Equipment</option>
+                                <option value="Marketing">Marketing</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit-project">Project (Optional)</label>
+                        <select id="edit-project">
+                            <option value="">No Project</option>
+                            <!-- Projects will be loaded dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit-description">Description</label>
+                        <textarea id="edit-description" rows="3"></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Update Expense</button>
+                        <button type="button" class="close-modal btn btn-secondary">Cancel</button>
+                    </div>
+
+                    <div class="error-message" id="edit-error"></div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Project Modal -->
+        <div id="project-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="project-modal-title">Add Project</h2>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <form id="project-form">
+                    <input type="hidden" id="project-id">
+                    
+                    <div class="form-group">
+                        <label for="project-name">Project Name *</label>
+                        <input type="text" id="project-name" required maxlength="120" placeholder="Client Name or Project Name">
+                        <small>Max 120 characters</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="project-description">Description</label>
+                        <textarea id="project-description" rows="3" maxlength="500" placeholder="Optional project details"></textarea>
+                        <small>Max 500 characters</small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="save-project-btn">Save Project</button>
+                        <button type="button" class="close-modal btn btn-secondary">Cancel</button>
+                    </div>
+
+                    <div class="error-message" id="project-error"></div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay" style="display: none;">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <script>
+        // Define API_BASE_URL globally before other scripts
+        window.API_BASE_URL = 'https://fcnq8h7mai.execute-api.us-east-1.amazonaws.com/prod';
+    </script>
+    <script src="chart.min.js"></script>
+    <script src="dashboard-enhanced.js"></script>
+    <script src="oauth.js"></script>
+    <script src="app.js"></script>
+    <script>
+        // Mobile menu toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+            const appNav = document.getElementById('app-nav');
+            
+            if (mobileMenuToggle && appNav) {
+                mobileMenuToggle.addEventListener('click', function() {
+                    this.classList.toggle('active');
+                    appNav.classList.toggle('mobile-open');
+                });
+
+                // Close menu when clicking nav buttons
+                const navButtons = appNav.querySelectorAll('.nav-btn');
+                navButtons.forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        mobileMenuToggle.classList.remove('active');
+                        appNav.classList.remove('mobile-open');
+                    });
+                });
+
+                // Close menu when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!appNav.contains(e.target) && !mobileMenuToggle.contains(e.target)) {
+                        mobileMenuToggle.classList.remove('active');
+                        appNav.classList.remove('mobile-open');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
+

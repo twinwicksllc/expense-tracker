@@ -627,7 +627,7 @@ exports.getDashboard = async (event) => {
                 statusCode: 200,
                 headers: {
                     'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': 'https://teckstart.com',
+                    'Access-Control-Allow-Origin': 'https://app.twin-wicks.com',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,GET'
                 },
@@ -903,31 +903,6 @@ exports.getDashboard = async (event) => {
             monthlyData[monthKey][groupKey] = (monthlyData[monthKey][groupKey] || 0) + exp.amount;
         });
 
-        // For MTD period, also group comparison (prior month) expenses
-        const priorMonthData = {};
-        if (period === 'mtd') {
-            compareExpenses.forEach(exp => {
-                const expDate = new Date(exp.transactionDate || exp.date);
-                const monthKey = `${expDate.getFullYear()}-${String(expDate.getMonth() + 1).padStart(2, '0')}`;
-                
-                if (!priorMonthData[monthKey]) {
-                    priorMonthData[monthKey] = {};
-                }
-    
-                // Determine grouping key
-                let groupKey;
-                if (groupBy === 'vendor') {
-                    groupKey = exp.vendor || 'Unknown';
-                } else if (groupBy === 'category') {
-                    groupKey = exp.category || 'Uncategorized';
-                } else if (groupBy === 'project') {
-                    groupKey = exp.projectId || 'General Business Expense';
-                }
-    
-                priorMonthData[monthKey][groupKey] = (priorMonthData[monthKey][groupKey] || 0) + exp.amount;
-            });
-        }
-
         // Convert monthly data to array format for charting
         const monthlyChartData = Object.keys(monthlyData)
             .sort()
@@ -941,33 +916,12 @@ exports.getDashboard = async (event) => {
                     breakdown: monthlyData[monthKey]
                 };
             });
-           
-           // For MTD, convert prior month data to chart format
-           const priorMonthChartData = period === 'mtd' ? Object.keys(priorMonthData)
-               .sort()
-               .map(monthKey => {
-                   const [year, month] = monthKey.split('-');
-                   const monthName = new Date(year, parseInt(month) - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-                   
-                   return {
-                       month: monthName + ' (Prior)',
-                       monthKey: monthKey,
-                       breakdown: priorMonthData[monthKey]
-                   };
-               }) : [];
 
         // Get all unique group keys for the legend
         const allGroupKeys = new Set();
         Object.values(monthlyData).forEach(monthData => {
             Object.keys(monthData).forEach(key => allGroupKeys.add(key));
         });
-           
-           // Add prior month group keys for MTD
-           if (period === 'mtd') {
-               Object.values(priorMonthData).forEach(monthData => {
-                   Object.keys(monthData).forEach(key => allGroupKeys.add(key));
-               });
-           }
 
         // Calculate category breakdown for current period
         const categoryTotals = {};
@@ -1014,7 +968,6 @@ exports.getDashboard = async (event) => {
                 countChange: Math.round(countChangePercent * 10) / 10
             },
             monthlyData: monthlyChartData,
-               priorMonthData: priorMonthChartData,
             groupKeys: Array.from(allGroupKeys).sort(),
             breakdowns: {
                 byCategory: categoryTotals,

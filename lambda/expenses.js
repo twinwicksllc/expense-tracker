@@ -127,6 +127,8 @@ exports.createExpense = async (event) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -156,6 +158,8 @@ exports.createExpense = async (event) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -219,6 +223,8 @@ exports.createExpense = async (event) => {
             headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -232,6 +238,8 @@ exports.createExpense = async (event) => {
             headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -254,6 +262,8 @@ exports.getExpenses = async (event) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -326,6 +336,8 @@ exports.getExpenses = async (event) => {
             headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -339,6 +351,8 @@ exports.getExpenses = async (event) => {
             headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -361,6 +375,8 @@ exports.getExpense = async (event) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -381,6 +397,8 @@ exports.getExpense = async (event) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -393,6 +411,8 @@ exports.getExpense = async (event) => {
             headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -406,6 +426,8 @@ exports.getExpense = async (event) => {
             headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -428,6 +450,8 @@ exports.updateExpense = async (event) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -502,6 +526,8 @@ exports.updateExpense = async (event) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -532,6 +558,8 @@ exports.updateExpense = async (event) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -554,6 +582,8 @@ exports.updateExpense = async (event) => {
             headers: {
                 'Content-Type': 'application/json',
                 'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                 'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
             },
@@ -567,6 +597,8 @@ exports.updateExpense = async (event) => {
             headers: {
                 'Content-Type': 'application/json',
                 'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                 'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
             },
@@ -589,6 +621,8 @@ exports.deleteExpense = async (event) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -610,6 +644,8 @@ exports.deleteExpense = async (event) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -636,6 +672,8 @@ exports.deleteExpense = async (event) => {
             headers: {
                 'Content-Type': 'application/json',
                 'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                 'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
             },
@@ -649,6 +687,8 @@ exports.deleteExpense = async (event) => {
             headers: {
                 'Content-Type': 'application/json',
                 'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                 'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
             },
@@ -686,6 +726,8 @@ exports.handler = async (event) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -699,6 +741,8 @@ exports.handler = async (event) => {
             headers: {
                 'Content-Type': 'application/json',
                 'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                 'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
             },

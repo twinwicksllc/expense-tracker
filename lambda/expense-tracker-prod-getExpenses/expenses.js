@@ -1,3 +1,5 @@
+// Expense Tracker Lambda Functions
+
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, PutCommand, QueryCommand, GetCommand, UpdateCommand, DeleteCommand } = require('@aws-sdk/lib-dynamodb');
 const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
@@ -81,6 +83,19 @@ function validateExpenseInput(data) {
         errors.push('S3 key is invalid');
     }
     
+    // Validate project (optional)
+    if (data.projectId && typeof data.projectId !== 'string') {
+        errors.push('Project ID must be a string');
+    } else if (data.projectId && data.projectId.length > 120) {
+        errors.push('Project ID is too long');
+    }
+    
+    if (data.projectName && typeof data.projectName !== 'string') {
+        errors.push('Project name must be a string');
+    } else if (data.projectName && data.projectName.length > 120) {
+        errors.push('Project name must be 120 characters or less');
+    }
+    
     return {
         isValid: errors.length === 0,
         errors
@@ -112,6 +127,8 @@ exports.createExpense = async (event) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -131,16 +148,18 @@ exports.createExpense = async (event) => {
             body = event.body || {};
         }
 
-        const { vendor, amount, date, category, description, notes, s3Key } = body;
+        const { vendor, amount, date, category, description, notes, s3Key, projectId, projectName } = body;
 
         // Validate input
-        const validation = validateExpenseInput({ vendor, amount, date, category, description, notes, s3Key });
+        const validation = validateExpenseInput({ vendor, amount, date, category, description, notes, s3Key, projectId, projectName });
         if (!validation.isValid) {
             return {
                 statusCode: 400,
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -168,18 +187,26 @@ exports.createExpense = async (event) => {
             status: 'processed'
         };
         
+        // Add project fields if provided
+        if (projectId) {
+            transaction.projectId = sanitizeString(projectId, 120);
+        }
+        if (projectName) {
+            transaction.projectName = sanitizeString(projectName, 120);
+        }
+        
         // Only add receipt fields if s3Key is provided
         if (s3Key) {
             const receiptKey = s3Key;
             
-            // Generate signed URL for receipt access (valid for 7 days)
+            // Generate signed URL for receipt access (valid for 1 hour)
             const receiptUrl = await getSignedUrl(
                 s3Client,
                 new GetObjectCommand({
                     Bucket: RECEIPTS_BUCKET,
                     Key: receiptKey
                 }),
-                { expiresIn: 604800 }
+                { expiresIn: 3600 }
             );
             
             transaction.receiptUrl = receiptUrl;
@@ -196,6 +223,8 @@ exports.createExpense = async (event) => {
             headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -209,6 +238,8 @@ exports.createExpense = async (event) => {
             headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -231,6 +262,8 @@ exports.getExpenses = async (event) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -242,7 +275,6 @@ exports.getExpenses = async (event) => {
         const sortBy = params.sortBy || 'uploadDate';
         const order = params.order || 'desc';
         const category = params.category;
-        const projectId = params.projectId;
 
         // Query all transactions for user
         const queryParams = {
@@ -270,11 +302,6 @@ exports.getExpenses = async (event) => {
             expenses = expenses.filter(exp => exp.category === category);
         }
 
-        // Filter by projectId if specified
-        if (projectId) {
-            expenses = expenses.filter(exp => exp.projectId === projectId);
-        }
-
         // Sort if not using GSI
         if (sortBy !== 'uploadDate') {
             expenses.sort((a, b) => {
@@ -285,11 +312,32 @@ exports.getExpenses = async (event) => {
             });
         }
 
+        // Regenerate presigned URLs for receipts (7 day expiration)
+        for (const expense of expenses) {
+            if (expense.receiptKey) {
+                try {
+                    expense.receiptUrl = await getSignedUrl(
+                        s3Client,
+                        new GetObjectCommand({
+                            Bucket: RECEIPTS_BUCKET,
+                            Key: expense.receiptKey
+                        }),
+                        { expiresIn: 604800 } // 7 days
+                    );
+                } catch (error) {
+                    console.error(`Failed to generate presigned URL for ${expense.receiptKey}:`, error);
+                    expense.receiptUrl = null;
+                }
+            }
+        }
+
         return {
             statusCode: 200,
             headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -303,6 +351,8 @@ exports.getExpenses = async (event) => {
             headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -325,6 +375,8 @@ exports.getExpense = async (event) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -345,6 +397,8 @@ exports.getExpense = async (event) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -357,6 +411,8 @@ exports.getExpense = async (event) => {
             headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -370,6 +426,8 @@ exports.getExpense = async (event) => {
             headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -392,6 +450,8 @@ exports.updateExpense = async (event) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -400,7 +460,14 @@ exports.updateExpense = async (event) => {
         }
 
         const transactionId = event.pathParameters.transactionId;
-        const updates = JSON.parse(event.body);
+        
+        // Handle base64-encoded body
+        let bodyString = event.body;
+        if (event.isBase64Encoded && bodyString) {
+            bodyString = Buffer.from(bodyString, 'base64').toString('utf-8');
+        }
+        
+        const updates = JSON.parse(bodyString);
 
         // Validate update data
         const validation = validateExpenseInput({
@@ -440,6 +507,18 @@ exports.updateExpense = async (event) => {
                 updateValidation.errors.push('Date must be a valid date format');
             }
         }
+        if (updates.projectId !== undefined) {
+            if (typeof updates.projectId !== 'string' || updates.projectId.length > 120) {
+                updateValidation.isValid = false;
+                updateValidation.errors.push('Project ID must be a string with max 120 characters');
+            }
+        }
+        if (updates.projectName !== undefined) {
+            if (typeof updates.projectName !== 'string' || updates.projectName.length > 120) {
+                updateValidation.isValid = false;
+                updateValidation.errors.push('Project name must be a string with max 120 characters');
+            }
+        }
         
         if (!updateValidation.isValid) {
             return {
@@ -447,6 +526,8 @@ exports.updateExpense = async (event) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -458,7 +539,7 @@ exports.updateExpense = async (event) => {
         }
 
         // Build update expression
-        const updateFields = ['amount', 'category', 'vendor', 'description', 'transactionDate'];
+        const updateFields = ['amount', 'category', 'vendor', 'description', 'transactionDate', 'projectId', 'projectName'];
         const updateExpressions = [];
         const expressionAttributeNames = {};
         const expressionAttributeValues = {};
@@ -477,6 +558,8 @@ exports.updateExpense = async (event) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -485,9 +568,10 @@ exports.updateExpense = async (event) => {
         }
 
         const result = await docClient.send(new UpdateCommand({
+    
             TableName: TRANSACTIONS_TABLE,
             Key: { userId, transactionId },
-            UpdateExpression: `SET ${updateExpressions.join(', ')}`,
+            UpdateExpression: 'SET ' + updateExpressions.join(', '),
             ExpressionAttributeNames: expressionAttributeNames,
             ExpressionAttributeValues: expressionAttributeValues,
             ReturnValues: 'ALL_NEW'
@@ -496,11 +580,13 @@ exports.updateExpense = async (event) => {
         return {
             statusCode: 200,
             headers: {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-                    'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
-                },
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
+                'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
+            },
             body: JSON.stringify(result.Attributes)
         };
     } catch (error) {
@@ -509,11 +595,13 @@ exports.updateExpense = async (event) => {
         return {
             statusCode: 500,
             headers: {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-                    'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
-                },
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
+                'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
+            },
             body: JSON.stringify({
                 message: error.message || 'Failed to update expense'
             })
@@ -533,6 +621,8 @@ exports.deleteExpense = async (event) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -542,7 +632,7 @@ exports.deleteExpense = async (event) => {
 
         const transactionId = event.pathParameters.transactionId;
 
-        // Get expense to find receipt key
+        // First get the expense to check if it has a receipt
         const getResult = await docClient.send(new GetCommand({
             TableName: TRANSACTIONS_TABLE,
             Key: { userId, transactionId }
@@ -554,6 +644,8 @@ exports.deleteExpense = async (event) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
@@ -561,7 +653,7 @@ exports.deleteExpense = async (event) => {
             };
         }
 
-        // Delete receipt from S3
+        // Delete receipt from S3 if exists
         if (getResult.Item.receiptKey) {
             await s3Client.send(new DeleteObjectCommand({
                 Bucket: RECEIPTS_BUCKET,
@@ -569,7 +661,7 @@ exports.deleteExpense = async (event) => {
             }));
         }
 
-        // Delete transaction from DynamoDB
+        // Delete from DynamoDB
         await docClient.send(new DeleteCommand({
             TableName: TRANSACTIONS_TABLE,
             Key: { userId, transactionId }
@@ -578,11 +670,13 @@ exports.deleteExpense = async (event) => {
         return {
             statusCode: 200,
             headers: {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-                    'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
-                },
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
+                'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
+            },
             body: JSON.stringify({ message: 'Expense deleted successfully' })
         };
     } catch (error) {
@@ -591,11 +685,13 @@ exports.deleteExpense = async (event) => {
         return {
             statusCode: 500,
             headers: {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-                    'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
-                },
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
+                'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
+            },
             body: JSON.stringify({
                 message: error.message || 'Failed to delete expense'
             })
@@ -604,77 +700,56 @@ exports.deleteExpense = async (event) => {
 };
 
 /**
- * Get dashboard summary
+ * Main Lambda handler - CRITICAL FOR LAMBDA TO WORK
  */
-exports.getDashboard = async (event) => {
+exports.handler = async (event) => {
+    console.log('Event:', JSON.stringify(event));
+    
+    const httpMethod = event.httpMethod;
+    const resource = event.resource;
+    
     try {
-        const userId = getUserId(event);
-        if (!userId) {
+        // Route to appropriate function based on HTTP method and resource
+        if (resource === '/expenses' && httpMethod === 'GET') {
+            return await exports.getExpenses(event);
+        } else if (resource === '/expenses' && httpMethod === 'POST') {
+            return await exports.createExpense(event);
+        } else if (resource === '/expenses/{transactionId}' && httpMethod === 'GET') {
+            return await exports.getExpense(event);
+        } else if (resource === '/expenses/{transactionId}' && httpMethod === 'PUT') {
+            return await exports.updateExpense(event);
+        } else if (resource === '/expenses/{transactionId}' && httpMethod === 'DELETE') {
+            return await exports.deleteExpense(event);
+        } else {
             return {
-                statusCode: 401,
+                statusCode: 404,
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
                 },
-                body: JSON.stringify({ message: 'Unauthorized' })
+                body: JSON.stringify({ message: 'Route not found' })
             };
         }
-
-        // Get all expenses
-        const result = await docClient.send(new QueryCommand({
-            TableName: TRANSACTIONS_TABLE,
-            KeyConditionExpression: 'userId = :userId',
-            ExpressionAttributeValues: {
-                ':userId': userId
-            }
-        }));
-
-        const expenses = result.Items || [];
-
-        // Calculate summary statistics
-        const totalAmount = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-        const categoryTotals = {};
-        
-        expenses.forEach(exp => {
-            categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + exp.amount;
-        });
-
-        const summary = {
-            totalExpenses: totalAmount,
-            transactionCount: expenses.length,
-            categoryBreakdown: categoryTotals,
-            recentExpenses: expenses
-                .sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate))
-                .slice(0, 10)
-        };
-
-        return {
-            statusCode: 200,
-            headers: {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-                    'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
-                },
-            body: JSON.stringify(summary)
-        };
     } catch (error) {
-        console.error('Get dashboard error:', error);
-        
+        console.error('Handler error:', error);
         return {
             statusCode: 500,
             headers: {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-                    'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
-                },
-            body: JSON.stringify({
-                message: error.message || 'Failed to get dashboard data'
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Private-Network': 'true',
+                    'Access-Control-Allow-Private-Network': 'true',
+                'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
+            },
+            body: JSON.stringify({ 
+                message: 'Internal server error',
+                error: error.message 
             })
         };
     }
 };
-

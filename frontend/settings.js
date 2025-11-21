@@ -183,7 +183,7 @@ async function handleLinkCallback(authCode) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${idToken}`
+                'X-Auth-Token': `Bearer ${idToken}`
             },
             body: JSON.stringify({
                 authorizationCode: authCode,
@@ -232,7 +232,7 @@ async function unlinkGoogleAccount() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${idToken}`
+                'X-Auth-Token': `Bearer ${idToken}`
             }
         });
 
@@ -349,7 +349,7 @@ async function loadAWSCredentialsStatus() {
     try {
         const response = await fetch(`${API_GATEWAY_URL}/aws-credentials`, {
             headers: {
-                'Authorization': idToken
+                'X-Auth-Token': idToken
             }
         });
         
@@ -457,7 +457,7 @@ async function saveAWSCredentials() {
         const response = await fetch(`${API_GATEWAY_URL}/aws-credentials`, {
             method: 'POST',
             headers: {
-                'Authorization': idToken,
+                'X-Auth-Token': idToken,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -511,7 +511,7 @@ async function triggerAWSImport() {
         const response = await fetch(`${API_GATEWAY_URL}/aws-cost-import`, {
             method: 'POST',
             headers: {
-                'Authorization': idToken,
+                'X-Auth-Token': idToken,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ months })
@@ -557,7 +557,7 @@ async function deleteAWSCredentials() {
         const response = await fetch(`${API_GATEWAY_URL}/aws-credentials`, {
             method: 'DELETE',
             headers: {
-                'Authorization': idToken
+                'X-Auth-Token': idToken
             }
         });
         

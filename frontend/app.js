@@ -218,7 +218,7 @@ async function apiRequest(endpoint, options = {}) {
     };
 
     if (state.idToken) {
-        headers['Authorization'] = `Bearer ${state.idToken}`;
+        headers['X-Auth-Token'] = `Bearer ${state.idToken}`;
     }
 
     const response = await fetch(`${CONFIG.API_BASE_URL}${endpoint}`, {
@@ -246,7 +246,7 @@ async function parseReceipt(file) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${state.idToken}`
+            'X-Auth-Token': `Bearer ${state.idToken}`
         },
         body: JSON.stringify({
             fileName: file.name,
@@ -278,7 +278,7 @@ async function parseReceipt(file) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${state.idToken}`
+            'X-Auth-Token': `Bearer ${state.idToken}`
         },
         body: JSON.stringify({ s3Key })
     });
@@ -296,7 +296,7 @@ async function createExpense(expenseData) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${state.idToken}`
+            'X-Auth-Token': `Bearer ${state.idToken}`
         },
         body: JSON.stringify(expenseData)
     });
@@ -962,7 +962,7 @@ const ProjectAPI = {
         const token = localStorage.getItem('idToken');
         const response = await fetch(`${this.baseURL}/projects`, {
             headers: {
-                'Authorization': `Bearer ${token}`,
+                'X-Auth-Token': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             }
         });
@@ -979,7 +979,7 @@ const ProjectAPI = {
         const response = await fetch(`${this.baseURL}/projects`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                'X-Auth-Token': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(projectData)
@@ -998,7 +998,7 @@ const ProjectAPI = {
         const response = await fetch(`${this.baseURL}/projects/${projectId}`, {
             method: 'PUT',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                'X-Auth-Token': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(projectData)
@@ -1017,7 +1017,7 @@ const ProjectAPI = {
         const response = await fetch(`${this.baseURL}/projects/${projectId}`, {
             method: 'DELETE',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                'X-Auth-Token': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             }
         });
@@ -1286,7 +1286,7 @@ const AWSCredentialsAPI = {
     async getStatus() {
         const response = await fetch(`${CONFIG.API_BASE_URL}/aws-credentials`, {
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('idToken')}`,
+                'X-Auth-Token': `Bearer ${localStorage.getItem('idToken')}`,
                 'Content-Type': 'application/json'
             }
         });
@@ -1298,7 +1298,7 @@ const AWSCredentialsAPI = {
         const response = await fetch(`${CONFIG.API_BASE_URL}/aws-credentials`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('idToken')}`,
+                'X-Auth-Token': `Bearer ${localStorage.getItem('idToken')}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(credentials)
@@ -1311,7 +1311,7 @@ const AWSCredentialsAPI = {
         const response = await fetch(`${CONFIG.API_BASE_URL}/aws-credentials`, {
             method: 'DELETE',
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('idToken')}`,
+                'X-Auth-Token': `Bearer ${localStorage.getItem('idToken')}`,
                 'Content-Type': 'application/json'
             }
         });
@@ -1323,7 +1323,7 @@ const AWSCredentialsAPI = {
         const response = await fetch(`${CONFIG.API_BASE_URL}/aws-credentials/toggle`, {
             method: 'PUT',
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('idToken')}`,
+                'X-Auth-Token': `Bearer ${localStorage.getItem('idToken')}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ enabled })
@@ -1336,7 +1336,7 @@ const AWSCredentialsAPI = {
         const response = await fetch(`${CONFIG.API_BASE_URL}/aws-cost-import`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('idToken')}`,
+                'X-Auth-Token': `Bearer ${localStorage.getItem('idToken')}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ months })
@@ -1584,7 +1584,7 @@ async function getIAMUserARN(accessKeyId, secretAccessKey, region) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('idToken')}`
+                'X-Auth-Token': `Bearer ${localStorage.getItem('idToken')}`
             },
             body: JSON.stringify({
                 accessKeyId,

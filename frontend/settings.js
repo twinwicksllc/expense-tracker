@@ -1,6 +1,6 @@
 // Settings page JavaScript for account linking
 
-const API_GATEWAY_URL = 'https://fcnq8h7mai.execute-api.us-east-1.amazonaws.com/prod';
+const API_GATEWAY_URL = '/api';
 const COGNITO_DOMAIN = 'https://expense-tracker-prod-v2.auth.us-east-1.amazoncognito.com';
 const CLIENT_ID = '6jb82h9lrvh29505t1ihavfte9';
 const REDIRECT_URI = 'https://teckstart.com/settings.html';

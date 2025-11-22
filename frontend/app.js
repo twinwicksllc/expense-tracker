@@ -1,6 +1,6 @@
 // Configuration
 const CONFIG = {
-    API_BASE_URL: '/api',
+    API_BASE_URL: '/backend',
     COGNITO: {
         USER_POOL_ID: 'us-east-1_iSsgMCrkM',
         CLIENT_ID: '6jb82h9lrvh29505t1ihavfte9',
@@ -956,7 +956,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Project API functions
 const ProjectAPI = {
-    baseURL: '/api',
+    baseURL: '/backend',
     
     async getProjects() {
         const token = localStorage.getItem('idToken');

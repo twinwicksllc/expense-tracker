@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Callback - Expense Tracker</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="shortcut icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" href="favicon.png">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .callback-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .callback-card {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 400px;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4285f4;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error-message {
+            color: #d32f2f;
+            background: #ffebee;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #d32f2f;
+        }
+        .success-message {
+            color: #2e7d32;
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #2e7d32;
+        }
+    </style>
+</head>
+<body>
+    <div class="callback-container">
+        <div class="callback-card">
+            <h2>Authenticating...</h2>
+            <div class="spinner"></div>
+            <p id="status-text">Please wait while we complete your sign-in.</p>
+            <div id="message"></div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="oauth.js"></script>
+    <script>
+        // Handle OAuth callback
+        document.addEventListener('DOMContentLoaded', function() {
+            const statusText = document.getElementById('status-text');
+            const messageDiv = document.getElementById('message');
+            
+            try {
+                // Parse URL parameters for OAuth response
+                const urlParams = new URLSearchParams(window.location.search);
+                const code = urlParams.get('code');
+                const error = urlParams.get('error');
+                
+                if (error) {
+                    throw new Error(`Authentication error: ${error}`);
+                }
+                
+                if (!code) {
+                    throw new Error('No authorization code received');
+                }
+                
+                // Redirect to main app with the code
+                window.location.href = `/?code=${encodeURIComponent(code)}`;
+                
+            } catch (error) {
+                console.error('Callback error:', error);
+                statusText.textContent = 'Authentication Failed';
+                messageDiv.innerHTML = `
+                    <div class="error-message">
+                        <strong>Error:</strong> ${error.message}
+                        <br><br>
+                        <a href="/" style="color: #1976d2; text-decoration: underline;">
+                            Return to Login
+                        </a>
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

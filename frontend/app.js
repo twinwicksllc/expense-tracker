@@ -1,15 +1,4 @@
-// Configuration
-const CONFIG = {
-    API_BASE_URL: 'https://fcnq8h7mai.execute-api.us-east-1.amazonaws.com/prod',
-    COGNITO: {
-        USER_POOL_ID: 'us-east-1_7H7R5DVZT',
-        CLIENT_ID: 'pk3l1fkkre0ms4si0prabfavl',
-        REGION: 'us-east-1',
-        DOMAIN: 'https://expense-tracker-prod.auth.us-east-1.amazoncognito.com',
-        REDIRECT_URI: 'https://app.twin-wicks.com/callback',
-        SIGN_OUT_URI: 'https://app.twin-wicks.com'
-    }
-};
+// Configuration loaded from config.js
 
 // State Management
 const state = {

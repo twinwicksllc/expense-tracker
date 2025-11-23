@@ -31,7 +31,7 @@ function initializeChartControls() {
                 // Update active state
                 periodButtons.forEach(btn => btn.classList.remove('active'));
                 button.classList.add('active');
-                
+
                 currentPeriod = period;
                 await updateDashboard();
             }
@@ -48,7 +48,7 @@ function initializeChartControls() {
                 // Update active state
                 groupButtons.forEach(btn => btn.classList.remove('active'));
                 button.classList.add('active');
-                
+
                 currentGroupBy = groupBy;
                 await updateMonthlyChart();
             }
@@ -69,13 +69,13 @@ function initializeChartControls() {
 async function updateDashboard() {
     try {
         console.log(`Updating dashboard: period=${currentPeriod}, groupBy=${currentGroupBy}`);
-        
+
         const token = localStorage.getItem('idToken');
         if (!token) {
             throw new Error('Not authenticated');
         }
 
-        const response = await fetch(`${window.API_BASE_URL}/dashboard?period=${currentPeriod}&groupBy=${currentGroupBy}`, {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/dashboard?period=${currentPeriod}&groupBy=${currentGroupBy}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -108,13 +108,13 @@ async function updateDashboard() {
 async function updateMonthlyChart() {
     try {
         console.log(`Updating chart: period=${currentPeriod}, groupBy=${currentGroupBy}`);
-        
+
         const token = localStorage.getItem('idToken');
         if (!token) {
             throw new Error('Not authenticated');
         }
 
-        const response = await fetch(`${window.API_BASE_URL}/dashboard?period=${currentPeriod}&groupBy=${currentGroupBy}`, {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/dashboard?period=${currentPeriod}&groupBy=${currentGroupBy}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -175,7 +175,7 @@ function updateComparisonIndicator(elementId, percentChange) {
 
     const arrow = percentChange > 0 ? '↑' : percentChange < 0 ? '↓' : '→';
     const color = percentChange > 0 ? 'red' : percentChange < 0 ? 'green' : 'gray';
-    
+
     element.textContent = `${arrow} ${Math.abs(percentChange).toFixed(1)}%`;
     element.style.color = color;
 }
@@ -187,34 +187,34 @@ async function fetchProjectsCache() {
     if (projectsCache) {
         return projectsCache; // Return cached version
     }
-    
+
     try {
         const token = localStorage.getItem('idToken');
         if (!token) {
             console.warn('No auth token, cannot fetch projects');
             return {};
         }
-        
+
         const response = await fetch(`${CONFIG.API_BASE_URL}/projects`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
+
         if (!response.ok) {
             throw new Error(`Failed to fetch projects: ${response.status}`);
         }
-        
+
         const projects = await response.json();
-        
+
         // Create lookup map: projectId -> projectName
         const cache = {};
         projects.forEach(p => {
             cache[p.projectId] = p.name;
         });
-        
+
         projectsCache = cache;
         console.log('Projects cache created:', Object.keys(cache).length, 'projects');
         return cache;
-        
+
     } catch (error) {
         console.error('Failed to fetch projects for mapping:', error);
         return {}; // Return empty cache on error
@@ -256,23 +256,23 @@ async function renderMonthlyChart(monthlyData, groupKeys) {
 
         // Prepare data for Chart.js
         const labels = monthlyData.map(item => item.month);
-        
+
         // Generate colors for each group
         const colors = generateColors(groupKeys.length);
-        
+
         // Fetch project names if grouping by project
         let projectCache = {};
         if (currentGroupBy === 'project') {
             projectCache = await fetchProjectsCache();
         }
-        
+
         // Create datasets for each group key with proper labels
         const datasets = groupKeys.map((key, index) => {
             // Map project IDs to names if grouping by project
-            const displayLabel = currentGroupBy === 'project' 
+            const displayLabel = currentGroupBy === 'project'
                 ? getProjectName(key, projectCache)
                 : key;
-            
+
             return {
                 label: displayLabel,
                 data: monthlyData.map(item => item.breakdown[key] || 0),
@@ -311,7 +311,7 @@ async function renderMonthlyChart(monthlyData, groupKeys) {
                             font: {
                                 size: window.innerWidth < 768 ? 9 : 11
                             },
-                            callback: function(value) {
+                            callback: function (value) {
                                 return '$' + value.toLocaleString();
                             }
                         }
@@ -335,7 +335,7 @@ async function renderMonthlyChart(monthlyData, groupKeys) {
                             size: window.innerWidth < 768 ? 10 : 12
                         },
                         callbacks: {
-                            label: function(context) {
+                            label: function (context) {
                                 return context.dataset.label + ': $' + context.parsed.y.toFixed(2);
                             }
                         }
@@ -391,7 +391,7 @@ function showError(message) {
 
     // Fallback: console error
     console.error(message);
-    
+
     // Try to display in error container if it exists
     const errorContainer = document.querySelector('#error-message');
     if (errorContainer) {

@@ -1,15 +1,4 @@
-// Configuration
-const CONFIG = {
-    API_BASE_URL: 'https://fcnq8h7mai.execute-api.us-east-1.amazonaws.com/prod',
-    COGNITO: {
-        USER_POOL_ID: 'us-east-1_iSsgMCrkM',
-        CLIENT_ID: '6jb82h9lrvh29505t1ihavfte9',
-        REGION: 'us-east-1',
-        DOMAIN: 'https://expense-tracker-prod-v2.auth.us-east-1.amazoncognito.com',
-        REDIRECT_URI: 'https://app.twin-wicks.com/callback',
-        SIGN_OUT_URI: 'https://app.twin-wicks.com'
-    }
-};
+// Configuration loaded from config.js
 
 // State Management
 const state = {
@@ -24,14 +13,14 @@ const VALID_CATEGORIES = ['Office Supplies', 'Travel', 'Meals', 'Software', 'Equ
 
 function validateExpenseForm(data) {
     const errors = [];
-    
+
     // Validate vendor
     if (!data.vendor || data.vendor.trim().length === 0) {
         errors.push('Vendor is required');
     } else if (data.vendor.length > 200) {
         errors.push('Vendor must be less than 200 characters');
     }
-    
+
     // Validate amount
     if (!data.amount || isNaN(data.amount)) {
         errors.push('Amount must be a valid number');
@@ -40,7 +29,7 @@ function validateExpenseForm(data) {
     } else if (data.amount > 1000000) {
         errors.push('Amount must be less than $1,000,000');
     }
-    
+
     // Validate date
     if (!data.date) {
         errors.push('Date is required');
@@ -52,19 +41,19 @@ function validateExpenseForm(data) {
             errors.push('Date cannot be in the future');
         }
     }
-    
+
     // Validate category
     if (!data.category || data.category === 'Select category') {
         errors.push('Category is required');
     } else if (!VALID_CATEGORIES.includes(data.category)) {
         errors.push('Invalid category selected');
     }
-    
+
     // Validate optional fields
     if (data.description && data.description.length > 1000) {
         errors.push('Description must be less than 1000 characters');
     }
-    
+
     return {
         isValid: errors.length === 0,
         errors
@@ -158,7 +147,7 @@ async function signup(email, password) {
         });
 
         const data = await response.json();
-        
+
         if (!response.ok) {
             throw new Error(data.message || 'Signup failed');
         }
@@ -178,7 +167,7 @@ async function confirmSignup(email, code) {
         });
 
         const data = await response.json();
-        
+
         if (!response.ok) {
             throw new Error(data.message || 'Confirmation failed');
         }
@@ -198,7 +187,7 @@ async function login(email, password) {
         });
 
         const data = await response.json();
-        
+
         if (!response.ok) {
             throw new Error(data.message || 'Login failed');
         }
@@ -226,7 +215,7 @@ function logout() {
 function checkAuth() {
     const token = localStorage.getItem('idToken');
     const email = localStorage.getItem('userEmail');
-    
+
     if (token && email) {
         state.idToken = token;
         state.user = { email };
@@ -365,14 +354,14 @@ function initializeNavigation() {
     if (navButtons.length === 0) {
         return; // Not on dashboard page
     }
-    
+
     // Remove any existing listeners by cloning and replacing nodes
     // This prevents duplicate listeners if function is called multiple times
     navButtons.forEach(btn => {
         const newBtn = btn.cloneNode(true);
         btn.parentNode.replaceChild(newBtn, btn);
     });
-    
+
     // Attach fresh event listeners to all nav buttons
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -384,14 +373,14 @@ function initializeNavigation() {
             }
         });
     });
-    
+
     console.log('Navigation initialized: event listeners attached to', navButtons.length, 'buttons');
 }
 
 function showAuthScreen() {
     const authScreen = document.getElementById('auth-screen');
     const mainScreen = document.getElementById('main-screen');
-    
+
     if (authScreen) authScreen.style.display = 'block';
     if (mainScreen) mainScreen.style.display = 'none';
 }
@@ -400,21 +389,21 @@ function showMainScreen() {
     const authScreen = document.getElementById('auth-screen');
     const mainScreen = document.getElementById('main-screen');
     const userEmail = document.getElementById('user-email');
-    
+
     if (authScreen) authScreen.style.display = 'none';
     if (mainScreen) mainScreen.style.display = 'block';
     if (userEmail && state.user && state.user.email) {
         userEmail.textContent = state.user.email;
     }
-    
+
     // Only load dashboard if dashboard elements exist (not on settings page)
     if (document.getElementById('total-expenses')) {
         loadDashboard();
     }
-    
+
     // Initialize navigation event listeners (must run after main screen is shown)
     initializeNavigation();
-    
+
     // Initialize logout button (must run after main screen is shown)
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn && !logoutBtn.dataset.initialized) {
@@ -481,12 +470,12 @@ async function loadDashboard() {
 
         // Render category chart
         renderCategoryChart(categoryTotals);
-        
+
         // Initialize chart controls and load monthly chart
         if (window.dashboardEnhanced && typeof window.dashboardEnhanced.initializeChartControls === 'function') {
             window.dashboardEnhanced.initializeChartControls();
         }
-        
+
         if (window.dashboardEnhanced && typeof window.dashboardEnhanced.updateMonthlyChart === 'function') {
             await window.dashboardEnhanced.updateMonthlyChart();
         }
@@ -512,7 +501,7 @@ function renderCategoryChart(categoryTotals) {
 
     sortedCategories.forEach(([category, amount]) => {
         const percentage = (amount / maxAmount) * 100;
-        
+
         const barHTML = `
             <div class="category-bar">
                 <div class="category-name">${category}</div>
@@ -522,7 +511,7 @@ function renderCategoryChart(categoryTotals) {
                 <div class="category-amount">${formatCurrency(amount)}</div>
             </div>
         `;
-        
+
         chartContainer.insertAdjacentHTML('beforeend', barHTML);
     });
 }
@@ -535,22 +524,22 @@ async function loadExpenses() {
         const projectId = document.getElementById('filter-project').value;
 
         const [sortField, sortOrder] = sortBy.split('-');
-        
+
         const filters = {
             sortBy: sortField,
             order: sortOrder
         };
-        
+
         // Only add category filter if it has a value
         if (category && category !== '') {
             filters.category = category;
         }
-        
+
         // Only add project filter if it has a value
         if (projectId && projectId !== '') {
             filters.projectId = projectId;
         }
-        
+
         const expenses = await getExpenses(filters);
 
         state.expenses = expenses;
@@ -601,7 +590,7 @@ function renderExpensesList(expenses) {
                 </div>
             </div>
         `;
-        
+
         listContainer.insertAdjacentHTML('beforeend', cardHTML);
     });
 }
@@ -612,10 +601,10 @@ function resetExpenseForm() {
     document.getElementById('preview-section').style.display = 'none';
     document.getElementById('upload-area').style.display = 'block';
     document.getElementById('parsing-status').style.display = 'none';
-    
+
     // Clear s3Key state
     state.currentReceiptS3Key = null;
-    
+
     // Set today's date as default
     document.getElementById('expense-date').valueAsDate = new Date();
 }
@@ -623,7 +612,7 @@ function resetExpenseForm() {
 async function handleReceiptUpload(file) {
     console.log('[DEBUG] handleReceiptUpload called');
     showDebugMessage('Processing file...');
-    
+
     // Validate file exists
     if (!file) {
         const error = 'No file provided';
@@ -632,7 +621,7 @@ async function handleReceiptUpload(file) {
         showError('expense-error', error);
         return;
     }
-    
+
     // File size validation (10MB limit)
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
@@ -642,7 +631,7 @@ async function handleReceiptUpload(file) {
         showError('expense-error', error);
         return;
     }
-    
+
     // File type validation (check both MIME type and extension for mobile compatibility)
     const allowedMimeTypes = [
         'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/heic',
@@ -651,14 +640,14 @@ async function handleReceiptUpload(file) {
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     ];
     const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.pdf', '.doc', '.docx'];
-    
+
     const fileName = file.name.toLowerCase();
     const fileExt = fileName.substring(fileName.lastIndexOf('.'));
     const isValidMimeType = allowedMimeTypes.includes(file.type);
     const isValidExtension = allowedExtensions.includes(fileExt);
-    
+
     console.log('[DEBUG] File validation:', { type: file.type, ext: fileExt, validMime: isValidMimeType, validExt: isValidExtension });
-    
+
     if (!isValidMimeType && !isValidExtension) {
         const error = `Invalid file type: ${file.type || 'unknown'} (${fileExt})`;
         console.error('[DEBUG]', error);
@@ -666,7 +655,7 @@ async function handleReceiptUpload(file) {
         showError('expense-error', 'Please upload an image, PDF, or Word document');
         return;
     }
-    
+
     showDebugMessage('File validated, showing preview...');
     console.log('[DEBUG] File validation passed');
 
@@ -698,19 +687,19 @@ async function handleReceiptUpload(file) {
         showDebugMessage('Parsing receipt with AI...');
         document.getElementById('parsing-status').style.display = 'block';
         const parsed = await parseReceipt(file);
-        
+
         console.log('[DEBUG] Receipt parsed:', parsed);
         showDebugMessage('Receipt parsed successfully!');
-        
+
         // Store s3Key in state for later use
         state.currentReceiptS3Key = parsed.s3Key;
-        
+
         // Populate form with parsed data
         if (parsed.vendor) document.getElementById('expense-vendor').value = parsed.vendor;
         if (parsed.amount) document.getElementById('expense-amount').value = parsed.amount;
         if (parsed.date) document.getElementById('expense-date').value = parsed.date;
         if (parsed.category) document.getElementById('expense-category').value = parsed.category;
-        
+
         document.getElementById('parsing-status').style.display = 'none';
     } catch (error) {
         console.error('[DEBUG] Failed to parse receipt:', error);
@@ -763,13 +752,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Do NOT intercept OAuth callbacks meant for other pages (like settings.html)
     const urlParams = new URLSearchParams(window.location.search);
     const currentPath = window.location.pathname;
-    
+
     // Only handle OAuth callback if we're on the main page or /callback
     // NOT on settings.html or other pages that handle their own OAuth flows
     // Also check sessionStorage to see if this is a LINK_ACCOUNT flow
     const oauthFlow = sessionStorage.getItem('oauthFlow');
-    
-    if ((urlParams.has('code') || urlParams.has('error')) && 
+
+    if ((urlParams.has('code') || urlParams.has('error')) &&
         (currentPath === '/' || currentPath === '/index.html' || currentPath === '/callback')) {
         // If this is marked as LINK_ACCOUNT flow, don't intercept it
         if (oauthFlow === 'LINK_ACCOUNT') {
@@ -779,7 +768,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await handleOAuthCallback();
         return;
     }
-    
+
     // Check authentication on load (supports both email/password and OAuth)
     if (!checkAuth() && !checkOAuthAuth()) {
         showAuthScreen();
@@ -789,105 +778,105 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Only initialize dashboard-specific event listeners if on dashboard page
     const isDashboardPage = document.getElementById('expense-form') !== null;
-    
+
     // Auth tab switching (only on dashboard page)
     const tabButtons = document.querySelectorAll('.tab-btn');
     if (tabButtons.length > 0) {
         tabButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const tab = btn.dataset.tab;
-            
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-            document.getElementById(`${tab}-form`).classList.add('active');
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.tab;
+
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+                document.getElementById(`${tab}-form`).classList.add('active');
+            });
         });
-    });
     }
 
     // Login form
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
+            e.preventDefault();
 
-        try {
-            showLoading();
-            await login(email, password);
-            showMainScreen();
-        } catch (error) {
-            showError('login-error', error.message);
-        } finally {
-            showLoading(false);
-        }
-    });
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                showLoading();
+                await login(email, password);
+                showMainScreen();
+            } catch (error) {
+                showError('login-error', error.message);
+            } finally {
+                showLoading(false);
+            }
+        });
     }
 
     // Signup form
     const signupForm = document.getElementById('signup-form');
     if (signupForm) {
         signupForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const email = document.getElementById('signup-email').value;
-        const password = document.getElementById('signup-password').value;
-        const confirm = document.getElementById('signup-confirm').value;
+            e.preventDefault();
 
-        if (password !== confirm) {
-            showError('signup-error', 'Passwords do not match');
-            return;
-        }
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const confirm = document.getElementById('signup-confirm').value;
 
-        try {
-            showLoading();
-            await signup(email, password);
-            showSuccess('signup-success', 'Account created! Check your email for confirmation code.');
-            // Show confirmation code input
-            document.getElementById('confirmation-section').style.display = 'block';
-            document.getElementById('confirmation-email').value = email;
-            document.getElementById('signup-form').reset();
-            
-            // Switch to login tab after 2 seconds
-            setTimeout(() => {
-                document.querySelector('.tab-btn[data-tab="login"]').click();
-            }, 2000);
-        } catch (error) {
-            showError('signup-error', error.message);
-        } finally {
-            showLoading(false);
-        }
-    });
+            if (password !== confirm) {
+                showError('signup-error', 'Passwords do not match');
+                return;
+            }
+
+            try {
+                showLoading();
+                await signup(email, password);
+                showSuccess('signup-success', 'Account created! Check your email for confirmation code.');
+                // Show confirmation code input
+                document.getElementById('confirmation-section').style.display = 'block';
+                document.getElementById('confirmation-email').value = email;
+                document.getElementById('signup-form').reset();
+
+                // Switch to login tab after 2 seconds
+                setTimeout(() => {
+                    document.querySelector('.tab-btn[data-tab="login"]').click();
+                }, 2000);
+            } catch (error) {
+                showError('signup-error', error.message);
+            } finally {
+                showLoading(false);
+            }
+        });
     }
 
     // Confirmation form
     const confirmForm = document.getElementById('confirm-form');
     if (confirmForm) {
         confirmForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const email = document.getElementById('confirmation-email').value;
-        const code = document.getElementById('confirmation-code').value;
+            e.preventDefault();
 
-        try {
-            showLoading();
-            await confirmSignup(email, code);
-            showSuccess('confirm-success', 'Email confirmed! You can now login.');
-            document.getElementById('confirmation-section').style.display = 'none';
-            document.getElementById('confirm-form').reset();
-            // Switch to login tab
-            setTimeout(() => {
-                document.querySelector('.tab-btn[data-tab="login"]').click();
-            }, 2000);
-        } catch (error) {
-            showError('confirm-error', error.message);
-        } finally {
-            showLoading(false);
-        }
-    });
+            const email = document.getElementById('confirmation-email').value;
+            const code = document.getElementById('confirmation-code').value;
+
+            try {
+                showLoading();
+                await confirmSignup(email, code);
+                showSuccess('confirm-success', 'Email confirmed! You can now login.');
+                document.getElementById('confirmation-section').style.display = 'none';
+                document.getElementById('confirm-form').reset();
+                // Switch to login tab
+                setTimeout(() => {
+                    document.querySelector('.tab-btn[data-tab="login"]').click();
+                }, 2000);
+            } catch (error) {
+                showError('confirm-error', error.message);
+            } finally {
+                showLoading(false);
+            }
+        });
     }
 
     // Dashboard-specific initialization
@@ -895,169 +884,169 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Navigation event listeners are now initialized in initializeNavigation()
         // which is called from showMainScreen() to work with OAuth login
 
-    // Receipt upload
-    const uploadArea = document.getElementById('upload-area');
-    const receiptInput = document.getElementById('receipt-input');
+        // Receipt upload
+        const uploadArea = document.getElementById('upload-area');
+        const receiptInput = document.getElementById('receipt-input');
 
-    // File input change handler (label handles click natively for mobile compatibility)
-    receiptInput.addEventListener('change', async (e) => {
-        console.log('[DEBUG] File input change event fired');
-        console.log('[DEBUG] Files selected:', e.target.files.length);
-        
-        try {
-            if (e.target.files.length > 0) {
-                const file = e.target.files[0];
-                console.log('[DEBUG] File details:', {
-                    name: file.name,
-                    type: file.type,
-                    size: file.size
-                });
-                showDebugMessage(`File selected: ${file.name} (${file.type})`);
-                await handleReceiptUpload(file);
-            } else {
-                console.log('[DEBUG] No files selected');
-                showDebugMessage('No files selected');
+        // File input change handler (label handles click natively for mobile compatibility)
+        receiptInput.addEventListener('change', async (e) => {
+            console.log('[DEBUG] File input change event fired');
+            console.log('[DEBUG] Files selected:', e.target.files.length);
+
+            try {
+                if (e.target.files.length > 0) {
+                    const file = e.target.files[0];
+                    console.log('[DEBUG] File details:', {
+                        name: file.name,
+                        type: file.type,
+                        size: file.size
+                    });
+                    showDebugMessage(`File selected: ${file.name} (${file.type})`);
+                    await handleReceiptUpload(file);
+                } else {
+                    console.log('[DEBUG] No files selected');
+                    showDebugMessage('No files selected');
+                }
+            } catch (error) {
+                console.error('[DEBUG] Error in file upload:', error);
+                showDebugMessage(`ERROR: ${error.message}`);
+                showError('expense-error', `Upload failed: ${error.message}`);
             }
-        } catch (error) {
-            console.error('[DEBUG] Error in file upload:', error);
-            showDebugMessage(`ERROR: ${error.message}`);
-            showError('expense-error', `Upload failed: ${error.message}`);
-        }
-    });
-
-    // Drag and drop
-    uploadArea.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        uploadArea.classList.add('dragover');
-    });
-
-    uploadArea.addEventListener('dragleave', () => {
-        uploadArea.classList.remove('dragover');
-    });
-
-    uploadArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        uploadArea.classList.remove('dragover');
-        
-        if (e.dataTransfer.files.length > 0) {
-            receiptInput.files = e.dataTransfer.files;
-            handleReceiptUpload(e.dataTransfer.files[0]);
-        }
-    });
-
-    // Remove receipt
-    document.getElementById('remove-receipt').addEventListener('click', () => {
-        receiptInput.value = '';
-        document.getElementById('preview-section').style.display = 'none';
-        document.getElementById('upload-area').style.display = 'block';
-    });
-
-    // Expense form submission
-    document.getElementById('expense-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const expenseData = {
-            vendor: document.getElementById('expense-vendor').value,
-            amount: parseFloat(document.getElementById('expense-amount').value),
-            date: document.getElementById('expense-date').value,
-            category: document.getElementById('expense-category').value,
-            description: document.getElementById('expense-description').value,
-            projectId: document.getElementById('expense-project').value || null,
-            notes: ''
-        };
-        
-        // Validate form data
-        const validation = validateExpenseForm(expenseData);
-        if (!validation.isValid) {
-            showError('expense-error', validation.errors.join(', '));
-            return;
-        }
-        
-        // Only include s3Key if a receipt was uploaded
-        if (state.currentReceiptS3Key) {
-            expenseData.s3Key = state.currentReceiptS3Key;
-        }
-
-        try {
-            showLoading();
-            await createExpense(expenseData);
-            showSuccess('expense-success', 'Expense added successfully!');
-            
-            setTimeout(() => {
-                switchView('expenses');
-            }, 1500);
-        } catch (error) {
-            showError('expense-error', error.message);
-        } finally {
-            showLoading(false);
-        }
-    });
-
-    // Cancel expense
-    document.getElementById('cancel-expense').addEventListener('click', () => {
-        switchView('expenses');
-    });
-
-    // Edit expense form
-    document.getElementById('edit-expense-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const transactionId = document.getElementById('edit-transaction-id').value;
-        const updates = {
-            vendor: document.getElementById('edit-vendor').value,
-            amount: parseFloat(document.getElementById('edit-amount').value),
-            transactionDate: document.getElementById('edit-date').value,
-            category: document.getElementById('edit-category').value,
-            projectId: document.getElementById('edit-project').value || null,
-            description: document.getElementById('edit-description').value
-        };
-
-        // Validate form data
-        const validation = validateExpenseForm({
-            vendor: updates.vendor,
-            amount: updates.amount,
-            date: updates.transactionDate,
-            category: updates.category,
-            description: updates.description
         });
-        if (!validation.isValid) {
-            showError('edit-error', validation.errors.join(', '));
-            return;
-        }
 
-        try {
-            showLoading();
-            await updateExpense(transactionId, updates);
-            document.getElementById('edit-modal').classList.remove('show');
-            await loadExpenses();
-            if (state.currentView === 'dashboard') {
-                await loadDashboard();
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+
+            if (e.dataTransfer.files.length > 0) {
+                receiptInput.files = e.dataTransfer.files;
+                handleReceiptUpload(e.dataTransfer.files[0]);
             }
-        } catch (error) {
-            showError('edit-error', error.message);
-        } finally {
-            showLoading(false);
-        }
-    });
-
-    // Close modal
-    document.querySelectorAll('.close-modal').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.getElementById('edit-modal').classList.remove('show');
         });
-    });
 
-    // Filters
-    document.getElementById('sort-by').addEventListener('change', loadExpenses);
-    document.getElementById('filter-category').addEventListener('change', loadExpenses);
-    document.getElementById('filter-project').addEventListener('change', loadExpenses);
-    
-    // Initialize project events
-    initializeProjectEvents();
-    
-    // Initialize settings view
-    initializeSettingsView();
-    
+        // Remove receipt
+        document.getElementById('remove-receipt').addEventListener('click', () => {
+            receiptInput.value = '';
+            document.getElementById('preview-section').style.display = 'none';
+            document.getElementById('upload-area').style.display = 'block';
+        });
+
+        // Expense form submission
+        document.getElementById('expense-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const expenseData = {
+                vendor: document.getElementById('expense-vendor').value,
+                amount: parseFloat(document.getElementById('expense-amount').value),
+                date: document.getElementById('expense-date').value,
+                category: document.getElementById('expense-category').value,
+                description: document.getElementById('expense-description').value,
+                projectId: document.getElementById('expense-project').value || null,
+                notes: ''
+            };
+
+            // Validate form data
+            const validation = validateExpenseForm(expenseData);
+            if (!validation.isValid) {
+                showError('expense-error', validation.errors.join(', '));
+                return;
+            }
+
+            // Only include s3Key if a receipt was uploaded
+            if (state.currentReceiptS3Key) {
+                expenseData.s3Key = state.currentReceiptS3Key;
+            }
+
+            try {
+                showLoading();
+                await createExpense(expenseData);
+                showSuccess('expense-success', 'Expense added successfully!');
+
+                setTimeout(() => {
+                    switchView('expenses');
+                }, 1500);
+            } catch (error) {
+                showError('expense-error', error.message);
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        // Cancel expense
+        document.getElementById('cancel-expense').addEventListener('click', () => {
+            switchView('expenses');
+        });
+
+        // Edit expense form
+        document.getElementById('edit-expense-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const transactionId = document.getElementById('edit-transaction-id').value;
+            const updates = {
+                vendor: document.getElementById('edit-vendor').value,
+                amount: parseFloat(document.getElementById('edit-amount').value),
+                transactionDate: document.getElementById('edit-date').value,
+                category: document.getElementById('edit-category').value,
+                projectId: document.getElementById('edit-project').value || null,
+                description: document.getElementById('edit-description').value
+            };
+
+            // Validate form data
+            const validation = validateExpenseForm({
+                vendor: updates.vendor,
+                amount: updates.amount,
+                date: updates.transactionDate,
+                category: updates.category,
+                description: updates.description
+            });
+            if (!validation.isValid) {
+                showError('edit-error', validation.errors.join(', '));
+                return;
+            }
+
+            try {
+                showLoading();
+                await updateExpense(transactionId, updates);
+                document.getElementById('edit-modal').classList.remove('show');
+                await loadExpenses();
+                if (state.currentView === 'dashboard') {
+                    await loadDashboard();
+                }
+            } catch (error) {
+                showError('edit-error', error.message);
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        // Close modal
+        document.querySelectorAll('.close-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('edit-modal').classList.remove('show');
+            });
+        });
+
+        // Filters
+        document.getElementById('sort-by').addEventListener('change', loadExpenses);
+        document.getElementById('filter-category').addEventListener('change', loadExpenses);
+        document.getElementById('filter-project').addEventListener('change', loadExpenses);
+
+        // Initialize project events
+        initializeProjectEvents();
+
+        // Initialize settings view
+        initializeSettingsView();
+
         // Load projects on app start if authenticated
         if (checkAuth()) {
             loadProjectDropdowns().catch(console.error);
@@ -1070,7 +1059,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Project API functions
 const ProjectAPI = {
     baseURL: 'https://fcnq8h7mai.execute-api.us-east-1.amazonaws.com/prod',
-    
+
     async getProjects() {
         const token = localStorage.getItem('idToken');
         const response = await fetch(`${this.baseURL}/projects`, {
@@ -1079,14 +1068,14 @@ const ProjectAPI = {
                 'Content-Type': 'application/json'
             }
         });
-        
+
         if (!response.ok) {
             throw new Error('Failed to fetch projects');
         }
-        
+
         return await response.json();
     },
-    
+
     async createProject(projectData) {
         const token = localStorage.getItem('idToken');
         const response = await fetch(`${this.baseURL}/projects`, {
@@ -1097,15 +1086,15 @@ const ProjectAPI = {
             },
             body: JSON.stringify(projectData)
         });
-        
+
         if (!response.ok) {
             const error = await response.json();
             throw new Error(error.message || 'Failed to create project');
         }
-        
+
         return await response.json();
     },
-    
+
     async updateProject(projectId, projectData) {
         const token = localStorage.getItem('idToken');
         const response = await fetch(`${this.baseURL}/projects/${projectId}`, {
@@ -1116,15 +1105,15 @@ const ProjectAPI = {
             },
             body: JSON.stringify(projectData)
         });
-        
+
         if (!response.ok) {
             const error = await response.json();
             throw new Error(error.message || 'Failed to update project');
         }
-        
+
         return await response.json();
     },
-    
+
     async deleteProject(projectId) {
         const token = localStorage.getItem('idToken');
         const response = await fetch(`${this.baseURL}/projects/${projectId}`, {
@@ -1134,11 +1123,11 @@ const ProjectAPI = {
                 'Content-Type': 'application/json'
             }
         });
-        
+
         if (!response.ok) {
             throw new Error('Failed to delete project');
         }
-        
+
         return await response.json();
     }
 };
@@ -1165,7 +1154,7 @@ async function loadProjects() {
 // Render projects list
 function renderProjects() {
     const projectsList = document.getElementById('projects-list');
-    
+
     if (!allProjects || allProjects.length === 0) {
         projectsList.innerHTML = `
             <div class="empty-state">
@@ -1175,7 +1164,7 @@ function renderProjects() {
         `;
         return;
     }
-    
+
     projectsList.innerHTML = allProjects.map(project => `
         <div class="project-card">
             <div class="project-header">
@@ -1205,19 +1194,19 @@ async function loadProjectDropdowns() {
     const expenseProjectSelect = document.getElementById('expense-project');
     const editProjectSelect = document.getElementById('edit-project');
     const filterProjectSelect = document.getElementById('filter-project');
-    
-    const projectOptions = allProjects.map(project => 
+
+    const projectOptions = allProjects.map(project =>
         `<option value="${project.projectId}">${escapeHtml(project.name)}</option>`
     ).join('');
-    
+
     if (expenseProjectSelect) {
         expenseProjectSelect.innerHTML = '<option value="">No Project</option>' + projectOptions;
     }
-    
+
     if (editProjectSelect) {
         editProjectSelect.innerHTML = '<option value="">No Project</option>' + projectOptions;
     }
-    
+
     if (filterProjectSelect) {
         filterProjectSelect.innerHTML = '<option value="">All Projects</option>' + projectOptions;
     }
@@ -1231,10 +1220,10 @@ function showProjectModal(projectId = null) {
     const projectNameInput = document.getElementById('project-name');
     const projectDescInput = document.getElementById('project-description');
     const projectError = document.getElementById('project-error');
-    
+
     // Clear error
     projectError.textContent = '';
-    
+
     if (projectId) {
         // Edit mode
         const project = allProjects.find(p => p.projectId === projectId);
@@ -1253,7 +1242,7 @@ function showProjectModal(projectId = null) {
         projectDescInput.value = '';
         currentEditingProject = null;
     }
-    
+
     modal.style.display = 'flex';
 }
 
@@ -1294,37 +1283,37 @@ async function deleteProject(projectId) {
 // Handle project form submission
 async function handleProjectFormSubmit(e) {
     e.preventDefault();
-    
+
     const projectId = document.getElementById('project-id').value;
     const projectName = document.getElementById('project-name').value.trim();
     const projectDesc = document.getElementById('project-description').value.trim();
     const projectError = document.getElementById('project-error');
-    
+
     // Validation
     if (!projectName) {
         projectError.textContent = 'Project name is required';
         return;
     }
-    
+
     if (projectName.length > 120) {
         projectError.textContent = 'Project name must be 120 characters or less';
         return;
     }
-    
+
     if (projectDesc && projectDesc.length > 500) {
         projectError.textContent = 'Description must be 500 characters or less';
         return;
     }
-    
+
     try {
         showLoading();
         projectError.textContent = '';
-        
+
         const projectData = {
             name: projectName,
             description: projectDesc
         };
-        
+
         if (projectId) {
             // Update existing project
             await ProjectAPI.updateProject(projectId, projectData);
@@ -1334,7 +1323,7 @@ async function handleProjectFormSubmit(e) {
             await ProjectAPI.createProject(projectData);
             showSuccess('Project created successfully');
         }
-        
+
         hideProjectModal();
         await loadProjects();
     } catch (error) {
@@ -1352,13 +1341,13 @@ function initializeProjectEvents() {
     if (addProjectBtn) {
         addProjectBtn.addEventListener('click', () => showProjectModal());
     }
-    
+
     // Project form
     const projectForm = document.getElementById('project-form');
     if (projectForm) {
         projectForm.addEventListener('submit', handleProjectFormSubmit);
     }
-    
+
     // Modal close buttons
     const projectModal = document.getElementById('project-modal');
     if (projectModal) {
@@ -1366,7 +1355,7 @@ function initializeProjectEvents() {
         closeButtons.forEach(btn => {
             btn.addEventListener('click', hideProjectModal);
         });
-        
+
         // Close on outside click
         projectModal.addEventListener('click', (e) => {
             if (e.target === projectModal) {
@@ -1406,7 +1395,7 @@ const AWSCredentialsAPI = {
         if (!response.ok) throw new Error('Failed to get credentials status');
         return response.json();
     },
-    
+
     async save(credentials) {
         const response = await fetch(`${CONFIG.API_BASE_URL}/aws-credentials`, {
             method: 'POST',
@@ -1419,7 +1408,7 @@ const AWSCredentialsAPI = {
         if (!response.ok) throw new Error('Failed to save credentials');
         return response.json();
     },
-    
+
     async delete() {
         const response = await fetch(`${CONFIG.API_BASE_URL}/aws-credentials`, {
             method: 'DELETE',
@@ -1431,7 +1420,7 @@ const AWSCredentialsAPI = {
         if (!response.ok) throw new Error('Failed to delete credentials');
         return response.json();
     },
-    
+
     async toggle(enabled) {
         const response = await fetch(`${CONFIG.API_BASE_URL}/aws-credentials/toggle`, {
             method: 'PUT',
@@ -1444,7 +1433,7 @@ const AWSCredentialsAPI = {
         if (!response.ok) throw new Error('Failed to toggle credentials');
         return response.json();
     },
-    
+
     async importCosts(months = 1) {
         const response = await fetch(`${CONFIG.API_BASE_URL}/aws-cost-import`, {
             method: 'POST',
@@ -1463,7 +1452,7 @@ async function loadAWSCredentialsStatus() {
     try {
         const status = await AWSCredentialsAPI.getStatus();
         const statusContainer = document.getElementById('aws-credentials-status');
-        
+
         if (status.configured) {
             statusContainer.innerHTML = `
                 <div class="credential-configured">
@@ -1550,12 +1539,12 @@ async function saveAWSCredentials() {
     const accessKeyId = document.getElementById('aws-access-key').value.trim();
     const secretAccessKey = document.getElementById('aws-secret-key').value.trim();
     const region = document.getElementById('aws-region').value;
-    
+
     if (!accessKeyId || !secretAccessKey) {
         showError('aws-credentials-error', 'Please enter both Access Key ID and Secret Access Key');
         return;
     }
-    
+
     try {
         showLoading();
         await AWSCredentialsAPI.save({
@@ -1564,10 +1553,10 @@ async function saveAWSCredentials() {
             region,
             enabled: true
         });
-        
+
         hideLoading();
         showSuccess('aws-credentials-success', 'AWS credentials saved successfully!');
-        
+
         // Retrieve and display IAM ARN
         try {
             const arn = await getIAMUserARN(accessKeyId, secretAccessKey, region);
@@ -1577,7 +1566,7 @@ async function saveAWSCredentials() {
         } catch (error) {
             console.error('Could not retrieve IAM ARN:', error);
         }
-        
+
         setTimeout(() => {
             hideAWSCredentialsForm();
             loadAWSCredentialsStatus();
@@ -1593,7 +1582,7 @@ async function deleteAWSCredentials() {
     if (!confirm('Are you sure you want to remove your AWS credentials? This will disable automatic cost imports.')) {
         return;
     }
-    
+
     try {
         showLoading();
         await AWSCredentialsAPI.delete();
@@ -1622,20 +1611,20 @@ async function toggleAWSCredentials(enabled) {
 async function manualImportCosts() {
     const monthsSelect = document.getElementById('import-months');
     const months = monthsSelect ? parseInt(monthsSelect.value) : 1;
-    
-    const confirmMsg = months === 1 
+
+    const confirmMsg = months === 1
         ? 'This will import AWS costs for the previous month. Continue?'
         : `This will import AWS costs for the last ${months} months with automatic duplicate detection. Continue?`;
-    
+
     if (!confirm(confirmMsg)) {
         return;
     }
-    
+
     try {
         showLoading();
         const result = await AWSCredentialsAPI.importCosts(months);
         hideLoading();
-        
+
         if (result.results && result.results.length > 0) {
             const userResult = result.results[0];
             if (userResult.status === 'success') {
@@ -1666,11 +1655,11 @@ async function manualImportCosts() {
 function initializeSettingsView() {
     const saveBtn = document.getElementById('save-aws-credentials');
     const cancelBtn = document.getElementById('cancel-aws-credentials');
-    
+
     if (saveBtn) {
         saveBtn.addEventListener('click', saveAWSCredentials);
     }
-    
+
     if (cancelBtn) {
         cancelBtn.addEventListener('click', hideAWSCredentialsForm);
     }
@@ -1705,11 +1694,11 @@ async function getIAMUserARN(accessKeyId, secretAccessKey, region) {
                 region
             })
         });
-        
+
         if (!response.ok) {
             throw new Error('Failed to retrieve IAM ARN');
         }
-        
+
         const data = await response.json();
         return data.arn;
     } catch (error) {
@@ -1722,11 +1711,11 @@ function displayIAMARN(arn) {
     const arnDisplay = document.getElementById('iam-arn-display');
     const arnValue = document.getElementById('iam-arn-value');
     const copyBtn = document.getElementById('copy-arn');
-    
+
     if (arnDisplay && arnValue) {
         arnValue.textContent = arn;
         arnDisplay.style.display = 'block';
-        
+
         // Add copy functionality
         if (copyBtn) {
             copyBtn.onclick = () => {

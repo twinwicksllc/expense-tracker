@@ -945,7 +945,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Project API functions
 const ProjectAPI = {
-    baseURL: 'https://fcnq8h7mai.execute-api.us-east-1.amazonaws.com/prod',
+    baseURL: '/api',
     
     async getProjects() {
         const token = localStorage.getItem('idToken');

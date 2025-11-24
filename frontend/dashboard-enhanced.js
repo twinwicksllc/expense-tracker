@@ -77,7 +77,7 @@ async function updateDashboard() {
         const response = await fetch(`${window.API_BASE_URL}/dashboard?period=${currentPeriod}&groupBy=${currentGroupBy}`, {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                'X-Auth-Token': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             }
         });
@@ -116,7 +116,7 @@ async function updateMonthlyChart() {
         const response = await fetch(`${window.API_BASE_URL}/dashboard?period=${currentPeriod}&groupBy=${currentGroupBy}`, {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                'X-Auth-Token': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             }
         });

@@ -11,45 +11,6 @@ const state = {
 // Utility Functions
 const VALID_CATEGORIES = ['Office Supplies', 'Travel', 'Meals', 'Software', 'Equipment', 'Marketing', 'Other'];
 
-/**
- * Parses JWT token to extract payload
- */
-function parseJwt(token) {
-    try {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-
-        return JSON.parse(jsonPayload);
-    } catch (error) {
-        console.error('Error parsing JWT:', error);
-        return null;
-    }
-}
-
-/**
- * Checks if JWT token is expired
- */
-function isTokenExpired(token) {
-    try {
-        const payload = parseJwt(token);
-        if (!payload || !payload.exp) {
-            return true; // Token without exp is considered invalid
-        }
-        
-        const currentTime = Math.floor(Date.now() / 1000);
-        const expirationTime = payload.exp;
-        
-        // Add 5-minute buffer before expiration
-        return expirationTime <= (currentTime + 300);
-    } catch (error) {
-        console.error('Error checking token expiration:', error);
-        return true; // If we can't parse token, consider it expired
-    }
-}
-
 function validateExpenseForm(data) {
     const errors = [];
     
@@ -230,13 +191,6 @@ function checkAuth() {
     const email = localStorage.getItem('userEmail');
     
     if (token && email) {
-        // Check token expiration
-        if (isTokenExpired(token)) {
-            console.log('Token expired, clearing authentication');
-            localStorage.clear();
-            return false;
-        }
-        
         state.idToken = token;
         state.user = { email };
         showMainScreen();

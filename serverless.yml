@@ -1,0 +1,147 @@
+service: expense-tracker
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: prod
+  region: us-east-1
+  memorySize: 512
+  timeout: 30
+  environment:
+    # GLOBAL ENVIRONMENT VARIABLES (Available to all functions)
+    TRANSACTIONS_TABLE: expense-tracker-transactions-prod
+    PROJECTS_TABLE: expense-tracker-projects-prod
+    RECEIPTS_BUCKET: expense-tracker-receipts-prod-391907191624
+    ALLOWED_ORIGIN: https://teckstart.com
+    # IMPORTANT: Change this to a random 32-character string before deploying
+    ENCRYPTION_KEY: "CHANGE_ME_TO_32_CHAR_RANDOM_KEYS" 
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:BatchWriteItem
+          Resource: 
+            - "arn:aws:dynamodb:us-east-1:*:table/expense-tracker-transactions-prod*"
+            - "arn:aws:dynamodb:us-east-1:*:table/expense-tracker-projects-prod*"
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:GetObject
+          Resource: "arn:aws:s3:::expense-tracker-receipts-prod-391907191624/*"
+        - Effect: Allow
+          Action:
+            - bedrock:InvokeModel
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - ce:GetCostAndUsage
+          Resource: "*"
+
+functions:
+  # --- Expenses ---
+  createExpense:
+    handler: lambda/expenses/createExpense.handler
+    events:
+      - http:
+          path: expenses
+          method: post
+          cors: true
+          authorizer: &cognitoAuth
+            name: CognitoUserPoolAuth
+            arn: arn:aws:cognito-idp:us-east-1:*:userpool/us-east-1_iSsgMCrkM
+
+  getExpenses:
+    handler: lambda/expenses/getExpenses.handler
+    events:
+      - http:
+          path: expenses
+          method: get
+          cors: true
+          authorizer: *cognitoAuth
+
+  # --- Projects ---
+  createProject:
+    handler: lambda/projects/createProject.handler
+    events:
+      - http:
+          path: projects
+          method: post
+          cors: true
+          authorizer: *cognitoAuth
+
+  getProjects:
+    handler: lambda/projects/getProjects.handler
+    events:
+      - http:
+          path: projects
+          method: get
+          cors: true
+          authorizer: *cognitoAuth
+
+  # --- Settings & Sync ---
+  updateSettings:
+    handler: lambda/settings/updateSettings.handler
+    events:
+      - http:
+          path: settings
+          method: post
+          cors: true
+          authorizer: *cognitoAuth
+
+  syncAwsCosts:
+    handler: lambda/settings/syncAwsCosts.handler
+    timeout: 60
+    events:
+      - http:
+          path: sync-costs
+          method: post
+          cors: true
+          authorizer: *cognitoAuth
+
+  # --- AI & Upload ---
+  uploadUrl:
+    handler: lambda/uploadUrl.handler
+    events:
+      - http:
+          path: upload-url
+          method: post
+          cors: true
+          authorizer: *cognitoAuth
+
+  parseReceipt:
+    handler: lambda/parseReceipt.handler
+    timeout: 60
+    events:
+      - http:
+          path: parse-receipt
+          method: post
+          cors: true
+          authorizer: *cognitoAuth
+
+resources:
+  Resources:
+    # Explicitly creating the table here ensures it exists
+    ProjectsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: expense-tracker-projects-prod
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: projectId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: projectId
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST

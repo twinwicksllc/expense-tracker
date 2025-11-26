@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <script>
+        // Extract tokens from URL hash (Implicit Grant)
+        const hash = window.location.hash.substring(1);
+        const params = new URLSearchParams(hash);
+        
+        if (params.has('id_token')) {
+            localStorage.setItem('id_token', params.get('id_token'));
+            localStorage.setItem('access_token', params.get('access_token'));
+            window.location.href = '/index.html';
+        } else {
+            alert('Login failed');
+            window.location.href = '/index.html';
+        }
+    </script>
+</body>
+</html>

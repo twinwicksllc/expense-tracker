@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeckStart Expense Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">TeckStart Tracker</div>
+        <div id="auth-section">
+            </div>
+    </nav>
+
+    <div class="main-container" id="app-container" style="display:none;">
+        <div class="sidebar">
+            <button onclick="showTab('dashboard')">Dashboard</button>
+            <button onclick="showTab('expenses')">Expenses Entry</button>
+            <button onclick="showTab('projects')">Project Entry</button>
+            <button onclick="showTab('settings')">Settings</button>
+        </div>
+
+        <div class="content">
+            <div id="dashboard" class="tab-content active">
+                <h2>Dashboard</h2>
+                <div class="stats-row">
+                    <div class="card"><h3>YTD Expenses</h3><p id="ytd-expenses">$0.00</p></div>
+                    <div class="card"><h3>YTD Profit</h3><p id="ytd-profit">$0.00</p></div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="spendingChart"></canvas>
+                </div>
+                <div class="controls">
+                    <select id="chart-filter" onchange="updateDashboard()">
+                        <option value="category">By Category</option>
+                        <option value="project">By Project</option>
+                        <option value="service">By Service</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="expenses" class="tab-content">
+                <h2>Add Expense</h2>
+                <div class="upload-section">
+                    <label>AI Receipt Parse (PDF/Img)</label>
+                    <input type="file" id="receipt-upload" accept="image/*,.pdf">
+                    <button onclick="handleFileUpload()" id="btn-parse">Upload & Parse</button>
+                    <div id="upload-status"></div>
+                </div>
+                <hr>
+                <form id="expense-form" onsubmit="saveExpense(event)">
+                    <input type="hidden" id="exp-id"> <input type="hidden" id="exp-url"> <div class="form-group">
+                        <label>Vendor/Service</label>
+                        <input type="text" id="exp-vendor" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount</label>
+                        <input type="number" step="0.01" id="exp-amount" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" id="exp-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="exp-category">
+                            <option value="Software">Software</option>
+                            <option value="Hosting">Hosting</option>
+                            <option value="Office">Office</option>
+                            <option value="Travel">Travel</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Project Link (Optional)</label>
+                        <select id="exp-project-select"><option value="">None</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tax Deductible?</label>
+                        <input type="checkbox" id="exp-tax">
+                    </div>
+                    <button type="submit">Save Expense</button>
+                </form>
+            </div>
+
+            <div id="projects" class="tab-content">
+                <h2>Create Project</h2>
+                <form id="project-form" onsubmit="saveProject(event)">
+                    <div class="form-group">
+                        <label>Project Name</label>
+                        <input type="text" id="proj-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="proj-category">
+                            <option value="AI Web App">AI Web App</option>
+                            <option value="Website Build">Website Build</option>
+                            <option value="Website Hosting">Website Hosting</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Start Date</label>
+                        <input type="date" id="proj-start" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Expected End Date</label>
+                        <input type="date" id="proj-end">
+                    </div>
+                    <div class="form-group">
+                        <label>Description (Max 500)</label>
+                        <textarea id="proj-desc" maxlength="500" rows="4"></textarea>
+                    </div>
+                    <button type="submit">Save Project</button>
+                </form>
+            </div>
+
+            <div id="settings" class="tab-content">
+                <h2>Settings</h2>
+                <div class="card">
+                    <h3>AWS Cost Integration</h3>
+                    <p>Enter IAM User credentials with `ce:GetCostAndUsage` permissions.</p>
+                    <input type="text" id="aws-access-key" placeholder="Access Key ID">
+                    <input type="password" id="aws-secret-key" placeholder="Secret Access Key">
+                    <button onclick="saveAwsSettings()">Save Credentials</button>
+                </div>
+                <div class="card">
+                    <h3>Account</h3>
+                    <button onclick="logout()">Sign Out</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="login-container" style="text-align:center; margin-top:50px;">
+        <h1>Welcome to TeckStart</h1>
+        <button id="login-btn" onclick="login()">Login with Google</button>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="oauth.js"></script>
+    <script src="app.js"></script>
+    <script src="dashboard-enhanced.js"></script>
+</body>
+</html>

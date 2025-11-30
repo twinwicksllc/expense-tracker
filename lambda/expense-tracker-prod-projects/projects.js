@@ -224,7 +224,7 @@ exports.handler = async (event) => {
         
         // Add CORS headers
         const corsHeaders = {
-            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Origin': 'https://teckstart.com',
             'Access-Control-Allow-Headers': 'Content-Type,Authorization',
             'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
         };
@@ -267,7 +267,7 @@ exports.handler = async (event) => {
             statusCode: 500,
             headers: {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
+                'Access-Control-Allow-Origin': 'https://teckstart.com'
             },
             body: JSON.stringify({ error: 'Internal server error', message: error.message })
         };

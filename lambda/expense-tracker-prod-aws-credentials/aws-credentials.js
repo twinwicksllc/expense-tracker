@@ -8,17 +8,25 @@ const docClient = DynamoDBDocumentClient.from(ddbClient);
 const CREDENTIALS_TABLE = process.env.CREDENTIALS_TABLE || 'expense-tracker-aws-credentials-prod';
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY; // 32-byte hex string
 
+// Standard CORS headers for all responses
+const CORS_HEADERS = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': 'https://teckstart.com',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
+};
+
 // Simple encryption using AES-256-GCM
 function encrypt(text) {
     const key = Buffer.from(ENCRYPTION_KEY, 'hex');
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
-    
+
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    
+
     const authTag = cipher.getAuthTag();
-    
+
     return {
         encrypted,
         iv: iv.toString('hex'),
@@ -31,12 +39,12 @@ function decrypt(encryptedData) {
     const iv = Buffer.from(encryptedData.iv, 'hex');
     const authTag = Buffer.from(encryptedData.authTag, 'hex');
     const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
-    
+
     decipher.setAuthTag(authTag);
-    
+
     let decrypted = decipher.update(encryptedData.encrypted, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
-    
+
     return decrypted;
 }
 
@@ -44,24 +52,21 @@ function decrypt(encryptedData) {
 async function saveCredentials(event) {
     const userId = event.requestContext.authorizer.claims.sub;
     const body = JSON.parse(event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body);
-    
+
     const { accessKeyId, secretAccessKey, region = 'us-east-1', enabled = true } = body;
-    
+
     if (!accessKeyId || !secretAccessKey) {
         return {
             statusCode: 400,
-            headers: {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
+            headers: CORS_HEADERS,
             body: JSON.stringify({ error: 'Access Key ID and Secret Access Key are required' })
         };
     }
-    
+
     // Encrypt the credentials
     const encryptedAccessKey = encrypt(accessKeyId);
     const encryptedSecretKey = encrypt(secretAccessKey);
-    
+
     const item = {
         userId,
         accessKeyId: encryptedAccessKey,
@@ -71,18 +76,15 @@ async function saveCredentials(event) {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
     };
-    
+
     await docClient.send(new PutCommand({
         TableName: CREDENTIALS_TABLE,
         Item: item
     }));
-    
+
     return {
         statusCode: 200,
-        headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-        },
+        headers: CORS_HEADERS,
         body: JSON.stringify({
             message: 'AWS credentials saved successfully',
             region,
@@ -94,31 +96,25 @@ async function saveCredentials(event) {
 // Get AWS credentials status (not the actual credentials)
 async function getCredentialsStatus(event) {
     const userId = event.requestContext.authorizer.claims.sub;
-    
+
     const result = await docClient.send(new GetCommand({
         TableName: CREDENTIALS_TABLE,
         Key: { userId }
     }));
-    
+
     if (!result.Item) {
         return {
             statusCode: 200,
-            headers: {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
+            headers: CORS_HEADERS,
             body: JSON.stringify({
                 configured: false
             })
         };
     }
-    
+
     return {
         statusCode: 200,
-        headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-        },
+        headers: CORS_HEADERS,
         body: JSON.stringify({
             configured: true,
             region: result.Item.region,
@@ -132,21 +128,16 @@ async function getCredentialsStatus(event) {
 // Delete AWS credentials
 async function deleteCredentials(event) {
     const userId = event.requestContext.authorizer.claims.sub;
-    
+
     await docClient.send(new DeleteCommand({
         TableName: CREDENTIALS_TABLE,
         Key: { userId }
     }));
-    
+
     return {
         statusCode: 200,
-        headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-        },
-        body: JSON.stringify({
-            message: 'AWS credentials deleted successfully'
-        })
+        headers: CORS_HEADERS,
+        body: JSON.stringify({ message: 'AWS credentials deleted successfully' })
     };
 }
 
@@ -154,66 +145,53 @@ async function deleteCredentials(event) {
 async function toggleCredentials(event) {
     const userId = event.requestContext.authorizer.claims.sub;
     const body = JSON.parse(event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body);
-    
+
     const { enabled } = body;
-    
+
     const result = await docClient.send(new GetCommand({
         TableName: CREDENTIALS_TABLE,
         Key: { userId }
     }));
-    
+
     if (!result.Item) {
         return {
             statusCode: 404,
-            headers: {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
+            headers: CORS_HEADERS,
             body: JSON.stringify({ error: 'AWS credentials not found' })
         };
     }
-    
+
     result.Item.enabled = enabled;
     result.Item.updatedAt = new Date().toISOString();
-    
+
     await docClient.send(new PutCommand({
         TableName: CREDENTIALS_TABLE,
         Item: result.Item
     }));
-    
+
     return {
         statusCode: 200,
-        headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-        },
-        body: JSON.stringify({
-            message: 'AWS credentials status updated',
-            enabled
-        })
+        headers: CORS_HEADERS,
+        body: JSON.stringify({ message: 'AWS credentials status updated', enabled })
     };
 }
 
 exports.handler = async (event) => {
     console.log('Event:', JSON.stringify(event, null, 2));
-    
+
     try {
         const method = event.httpMethod;
         const path = event.path;
-        
+
         // Handle OPTIONS for CORS preflight
         if (method === 'OPTIONS') {
             return {
                 statusCode: 200,
-                headers: {
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'
-                },
+                headers: CORS_HEADERS,
                 body: ''
             };
         }
-        
+
         if (method === 'POST' && path === '/aws-credentials') {
             return await saveCredentials(event);
         } else if (method === 'GET' && path === '/aws-credentials') {
@@ -223,24 +201,18 @@ exports.handler = async (event) => {
         } else if (method === 'PUT' && path === '/aws-credentials/toggle') {
             return await toggleCredentials(event);
         }
-        
+
         return {
             statusCode: 404,
-            headers: {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
+            headers: CORS_HEADERS,
             body: JSON.stringify({ error: 'Not found' })
         };
-        
+
     } catch (error) {
         console.error('Error:', error);
         return {
             statusCode: 500,
-            headers: {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
+            headers: CORS_HEADERS,
             body: JSON.stringify({ error: error.message })
         };
     }
@@ -248,4 +220,3 @@ exports.handler = async (event) => {
 
 // Export decrypt function for use by cost import Lambda
 exports.decrypt = decrypt;
-

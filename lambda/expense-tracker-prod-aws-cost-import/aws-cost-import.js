@@ -10,7 +10,14 @@ const docClient = DynamoDBDocumentClient.from(ddbClient);
 const TRANSACTIONS_TABLE = process.env.TRANSACTIONS_TABLE || 'expense-tracker-transactions-prod';
 const CREDENTIALS_TABLE = process.env.CREDENTIALS_TABLE || 'expense-tracker-aws-credentials-prod';
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
-// MIN_AMOUNT filter removed - import all expenses regardless of amount
+
+// Standard CORS headers for all responses
+const CORS_HEADERS = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': 'https://teckstart.com',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
+};
 
 // Decrypt function (same as in aws-credentials.js)
 function decrypt(encryptedData) {
@@ -18,12 +25,12 @@ function decrypt(encryptedData) {
     const iv = Buffer.from(encryptedData.iv, 'hex');
     const authTag = Buffer.from(encryptedData.authTag, 'hex');
     const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
-    
+
     decipher.setAuthTag(authTag);
-    
+
     let decrypted = decipher.update(encryptedData.encrypted, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
-    
+
     return decrypted;
 }
 
@@ -33,11 +40,11 @@ async function getUserCredentials(userId) {
         TableName: CREDENTIALS_TABLE,
         Key: { userId }
     }));
-    
+
     if (!result.Item || !result.Item.enabled) {
         return null;
     }
-    
+
     return {
         accessKeyId: decrypt(result.Item.accessKeyId),
         secretAccessKey: decrypt(result.Item.secretAccessKey),
@@ -60,17 +67,17 @@ async function expenseExists(userId, vendor, amount, date) {
             ':date': date
         }
     }));
-    
+
     return result.Items && result.Items.length > 0;
 }
 
 // Import costs for a single user
 async function importCostsForUser(userId, months = 1) {
     console.log(`Importing costs for user: ${userId} for last ${months} month(s)`);
-    
+
     // Get user's AWS credentials
     const credentials = await getUserCredentials(userId);
-    
+
     if (!credentials) {
         console.log(`User ${userId} has no AWS credentials configured or disabled`);
         return {
@@ -79,7 +86,7 @@ async function importCostsForUser(userId, months = 1) {
             reason: 'No credentials or disabled'
         };
     }
-    
+
     // Create Cost Explorer client with user's credentials
     const ceClient = new CostExplorerClient({
         region: 'us-east-1', // Cost Explorer is only available in us-east-1
@@ -88,23 +95,23 @@ async function importCostsForUser(userId, months = 1) {
             secretAccessKey: credentials.secretAccessKey
         }
     });
-    
+
     try {
         const allExpenses = [];
         let totalSkipped = 0;
         let totalDuplicates = 0;
-        
+
         // Loop through each month
         for (let monthOffset = 1; monthOffset <= months; monthOffset++) {
             const now = new Date();
             const targetMonth = new Date(now.getFullYear(), now.getMonth() - monthOffset, 1);
             const targetMonthEnd = new Date(now.getFullYear(), now.getMonth() - monthOffset + 1, 0);
-            
+
             const startDate = targetMonth.toISOString().split('T')[0];
             const endDate = targetMonthEnd.toISOString().split('T')[0];
-            
+
             console.log(`Fetching costs from ${startDate} to ${endDate}`);
-            
+
             // Call Cost Explorer API
             const costData = await ceClient.send(new GetCostAndUsageCommand({
                 TimePeriod: {
@@ -120,25 +127,25 @@ async function importCostsForUser(userId, months = 1) {
                     }
                 ]
             }));
-            
+
             const expenses = [];
-        
+
         // Process each service's cost
         for (const result of costData.ResultsByTime) {
             for (const group of result.Groups) {
                 const serviceName = group.Keys[0];
                 const amount = parseFloat(group.Metrics.UnblendedCost.Amount);
-                
+
                 // Skip if amount is exactly $0.00 (but keep small amounts like $0.01)
                 if (amount === 0 || amount < 0.01) {
                     console.log(`Skipping ${serviceName}: $${amount.toFixed(2)} (zero or negligible cost)`);
                     totalSkipped++;
                     continue;
                 }
-                
+
                 const vendor = `AWS - ${serviceName}`;
                 const expenseAmount = parseFloat(amount.toFixed(2));
-                
+
                 // Check for duplicates
                 const isDuplicate = await expenseExists(userId, vendor, expenseAmount, endDate);
                 if (isDuplicate) {
@@ -146,7 +153,7 @@ async function importCostsForUser(userId, months = 1) {
                     totalDuplicates++;
                     continue;
                 }
-                
+
                 const transactionId = uuidv4();
                 const now = new Date().toISOString();
                 const expense = {
@@ -162,23 +169,23 @@ async function importCostsForUser(userId, months = 1) {
                     updatedAt: now,
                     source: 'aws-auto-import'
                 };
-                
+
                 // Save to DynamoDB
                 await docClient.send(new PutCommand({
                     TableName: TRANSACTIONS_TABLE,
                     Item: expense
                 }));
-                
+
                 expenses.push(expense);
                 console.log(`Added expense: ${serviceName} - $${expenseAmount}`);
             }
         }
-        
+
         allExpenses.push(...expenses);
         }
-        
+
         const totalCost = allExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-        
+
         return {
             userId,
             status: 'success',
@@ -188,7 +195,7 @@ async function importCostsForUser(userId, months = 1) {
             belowMinimumSkipped: totalSkipped,
             totalAmount: totalCost.toFixed(2)
         };
-        
+
     } catch (error) {
         console.error(`Error importing costs for user ${userId}:`, error);
         return {
@@ -202,10 +209,10 @@ async function importCostsForUser(userId, months = 1) {
 // Main handler - can be triggered by EventBridge or API Gateway
 exports.handler = async (event) => {
     console.log('Event:', JSON.stringify(event, null, 2));
-    
+
     try {
         let results = [];
-        
+
         // Parse months from request body (works for both API Gateway and EventBridge)
         let months = 1;
         if (event.body) {
@@ -222,7 +229,7 @@ exports.handler = async (event) => {
                 console.log('Could not parse request body:', e.message, 'defaulting to 1 month');
             }
         }
-        
+
         // Check if this is a manual trigger for a specific user (API Gateway)
         if (event.requestContext && event.requestContext.authorizer) {
             console.log('Manual import via API Gateway with authorizer');
@@ -232,7 +239,7 @@ exports.handler = async (event) => {
         } else if (event.requestContext && !event.requestContext.authorizer) {
             // API Gateway request but no authorizer (need to get userId from credentials table)
             console.log('Manual import via API Gateway without authorizer');
-            
+
             // Get all users with AWS credentials configured
             const scanResult = await docClient.send(new ScanCommand({
                 TableName: CREDENTIALS_TABLE,
@@ -241,9 +248,9 @@ exports.handler = async (event) => {
                     ':enabled': true
                 }
             }));
-            
+
             console.log(`Found ${scanResult.Items.length} users with AWS credentials enabled`);
-            
+
             // Import for each user with the specified number of months
             for (const credentials of scanResult.Items) {
                 const result = await importCostsForUser(credentials.userId, months);
@@ -252,7 +259,7 @@ exports.handler = async (event) => {
         } else {
             // Scheduled trigger (EventBridge) - import for all users
             console.log('Scheduled import for all users');
-            
+
             // Get all users with AWS credentials configured
             const scanResult = await docClient.send(new ScanCommand({
                 TableName: CREDENTIALS_TABLE,
@@ -261,16 +268,16 @@ exports.handler = async (event) => {
                     ':enabled': true
                 }
             }));
-            
+
             console.log(`Found ${scanResult.Items.length} users with AWS credentials enabled`);
-            
+
             // Import costs for each user
             for (const item of scanResult.Items) {
                 const result = await importCostsForUser(item.userId, months);
                 results.push(result);
             }
         }
-        
+
         const summary = {
             totalUsers: results.length,
             successful: results.filter(r => r.status === 'success').length,
@@ -278,28 +285,21 @@ exports.handler = async (event) => {
             errors: results.filter(r => r.status === 'error').length,
             results
         };
-        
+
         console.log('Import summary:', JSON.stringify(summary, null, 2));
-        
+
         return {
             statusCode: 200,
-            headers: {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
+            headers: CORS_HEADERS,
             body: JSON.stringify(summary)
         };
-        
+
     } catch (error) {
         console.error('Error:', error);
         return {
             statusCode: 500,
-            headers: {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
+            headers: CORS_HEADERS,
             body: JSON.stringify({ error: error.message })
         };
     }
 };
-

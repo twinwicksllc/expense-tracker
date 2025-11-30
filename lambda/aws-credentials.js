@@ -52,7 +52,7 @@ async function saveCredentials(event) {
             statusCode: 400,
             headers: {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
+                'Access-Control-Allow-Origin': 'https://teckstart.com'
             },
             body: JSON.stringify({ error: 'Access Key ID and Secret Access Key are required' })
         };
@@ -81,7 +81,7 @@ async function saveCredentials(event) {
         statusCode: 200,
         headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
+            'Access-Control-Allow-Origin': 'https://teckstart.com'
         },
         body: JSON.stringify({
             message: 'AWS credentials saved successfully',
@@ -105,7 +105,7 @@ async function getCredentialsStatus(event) {
             statusCode: 200,
             headers: {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
+                'Access-Control-Allow-Origin': 'https://teckstart.com'
             },
             body: JSON.stringify({
                 hasCredentials: false
@@ -126,7 +126,7 @@ async function getCredentialsStatus(event) {
         statusCode: 200,
         headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
+            'Access-Control-Allow-Origin': 'https://teckstart.com'
         },
         body: JSON.stringify({
             hasCredentials: true,
@@ -152,7 +152,7 @@ async function deleteCredentials(event) {
         statusCode: 200,
         headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
+            'Access-Control-Allow-Origin': 'https://teckstart.com'
         },
         body: JSON.stringify({
             message: 'AWS credentials deleted successfully'
@@ -177,7 +177,7 @@ async function toggleCredentials(event) {
             statusCode: 404,
             headers: {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
+                'Access-Control-Allow-Origin': 'https://teckstart.com'
             },
             body: JSON.stringify({ error: 'AWS credentials not found' })
         };
@@ -195,7 +195,7 @@ async function toggleCredentials(event) {
         statusCode: 200,
         headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
+            'Access-Control-Allow-Origin': 'https://teckstart.com'
         },
         body: JSON.stringify({
             message: 'AWS credentials status updated',
@@ -216,7 +216,7 @@ exports.handler = async (event) => {
             return {
                 statusCode: 200,
                 headers: {
-                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Origin': 'https://teckstart.com',
                     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
                     'Access-Control-Allow-Headers': 'Content-Type, Authorization'
                 },
@@ -238,7 +238,7 @@ exports.handler = async (event) => {
             statusCode: 404,
             headers: {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
+                'Access-Control-Allow-Origin': 'https://teckstart.com'
             },
             body: JSON.stringify({ error: 'Not found' })
         };
@@ -249,7 +249,7 @@ exports.handler = async (event) => {
             statusCode: 500,
             headers: {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
+                'Access-Control-Allow-Origin': 'https://teckstart.com'
             },
             body: JSON.stringify({ error: error.message })
         };

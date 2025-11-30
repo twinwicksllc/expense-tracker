@@ -1,0 +1,3820 @@
+{
+  "service": {
+    "service": "expense-tracker",
+    "serviceObject": {
+      "name": "expense-tracker"
+    },
+    "provider": {
+      "name": "aws",
+      "runtime": "nodejs18.x",
+      "region": "us-east-1",
+      "stage": "prod",
+      "memorySize": 512,
+      "timeout": 30,
+      "environment": {
+        "USER_POOL_ID": {
+          "Ref": "CognitoUserPool"
+        },
+        "CLIENT_ID": {
+          "Ref": "CognitoUserPoolClient"
+        },
+        "TRANSACTIONS_TABLE": {
+          "Ref": "TransactionsTable"
+        },
+        "RECEIPTS_BUCKET": {
+          "Ref": "ReceiptsBucket"
+        }
+      },
+      "apiGateway": {
+        "binaryMediaTypes": [
+          "multipart/form-data",
+          "*/*"
+        ]
+      },
+      "iam": {
+        "role": {
+          "statements": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "dynamodb:Query",
+                "dynamodb:Scan",
+                "dynamodb:GetItem",
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem",
+                "dynamodb:DeleteItem"
+              ],
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "TransactionsTable",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Sub": "${TransactionsTable.Arn}/index/*"
+                }
+              ]
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:DeleteObject"
+              ],
+              "Resource": [
+                {
+                  "Fn::Sub": "${ReceiptsBucket.Arn}/*"
+                }
+              ]
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "bedrock:InvokeModel",
+                "bedrock:InvokeModelWithResponseStream"
+              ],
+              "Resource": [
+                "arn:aws:bedrock:*:*:inference-profile/us.amazon.nova-pro-v1:0",
+                "arn:aws:bedrock:*::foundation-model/amazon.nova-pro-v1:0",
+                "arn:aws:bedrock:*::foundation-model/anthropic.claude-3-haiku-20240307-v1:0"
+              ]
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "cognito-idp:AdminGetUser",
+                "cognito-idp:AdminCreateUser"
+              ],
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "CognitoUserPool",
+                    "Arn"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "versionFunctions": true,
+      "compiledCloudFormationTemplate": {
+        "AWSTemplateFormatVersion": "2010-09-09",
+        "Description": "The AWS CloudFormation template for this Serverless application",
+        "Resources": {
+          "ServerlessDeploymentBucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+              "BucketEncryption": {
+                "ServerSideEncryptionConfiguration": [
+                  {
+                    "ServerSideEncryptionByDefault": {
+                      "SSEAlgorithm": "AES256"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "ServerlessDeploymentBucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+            "Properties": {
+              "Bucket": {
+                "Ref": "ServerlessDeploymentBucket"
+              },
+              "PolicyDocument": {
+                "Statement": [
+                  {
+                    "Action": "s3:*",
+                    "Effect": "Deny",
+                    "Principal": "*",
+                    "Resource": [
+                      {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "arn:",
+                            {
+                              "Ref": "AWS::Partition"
+                            },
+                            ":s3:::",
+                            {
+                              "Ref": "ServerlessDeploymentBucket"
+                            },
+                            "/*"
+                          ]
+                        ]
+                      },
+                      {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "arn:",
+                            {
+                              "Ref": "AWS::Partition"
+                            },
+                            ":s3:::",
+                            {
+                              "Ref": "ServerlessDeploymentBucket"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "Condition": {
+                      "Bool": {
+                        "aws:SecureTransport": false
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "SignupLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/expense-tracker-prod-signup"
+            }
+          },
+          "ConfirmSignupLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/expense-tracker-prod-confirmSignup"
+            }
+          },
+          "LoginLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/expense-tracker-prod-login"
+            }
+          },
+          "GetUserLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/expense-tracker-prod-getUser"
+            }
+          },
+          "CreateExpenseLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/expense-tracker-prod-createExpense"
+            }
+          },
+          "GetExpensesLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/expense-tracker-prod-getExpenses"
+            }
+          },
+          "GetExpenseLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/expense-tracker-prod-getExpense"
+            }
+          },
+          "UpdateExpenseLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/expense-tracker-prod-updateExpense"
+            }
+          },
+          "DeleteExpenseLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/expense-tracker-prod-deleteExpense"
+            }
+          },
+          "GetDashboardLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/expense-tracker-prod-getDashboard"
+            }
+          },
+          "GetUploadUrlLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/expense-tracker-prod-getUploadUrl"
+            }
+          },
+          "ParseReceiptLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/expense-tracker-prod-parseReceipt"
+            }
+          },
+          "IamRoleLambdaExecution": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+              "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": {
+                      "Service": [
+                        "lambda.amazonaws.com"
+                      ]
+                    },
+                    "Action": [
+                      "sts:AssumeRole"
+                    ]
+                  }
+                ]
+              },
+              "Policies": [
+                {
+                  "PolicyName": {
+                    "Fn::Join": [
+                      "-",
+                      [
+                        "expense-tracker",
+                        "prod",
+                        "lambda"
+                      ]
+                    ]
+                  },
+                  "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "logs:CreateLogStream",
+                          "logs:CreateLogGroup",
+                          "logs:TagResource"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/expense-tracker-prod*:*"
+                          }
+                        ]
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "logs:PutLogEvents"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/expense-tracker-prod*:*:*"
+                          }
+                        ]
+                      },
+                      {
+                        "$ref": "$[\"service\"][\"provider\"][\"iam\"][\"role\"][\"statements\"][0]"
+                      },
+                      {
+                        "$ref": "$[\"service\"][\"provider\"][\"iam\"][\"role\"][\"statements\"][1]"
+                      },
+                      {
+                        "$ref": "$[\"service\"][\"provider\"][\"iam\"][\"role\"][\"statements\"][2]"
+                      },
+                      {
+                        "$ref": "$[\"service\"][\"provider\"][\"iam\"][\"role\"][\"statements\"][3]"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "Path": "/",
+              "RoleName": {
+                "Fn::Join": [
+                  "-",
+                  [
+                    "expense-tracker",
+                    "prod",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    "lambdaRole"
+                  ]
+                ]
+              }
+            }
+          },
+          "SignupLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": {
+                  "Ref": "ServerlessDeploymentBucket"
+                },
+                "S3Key": "serverless/expense-tracker/prod/1764093159361-2025-11-25T17:52:39.361Z/expense-tracker.zip"
+              },
+              "Handler": "auth.signup",
+              "Runtime": "nodejs18.x",
+              "FunctionName": "expense-tracker-prod-signup",
+              "MemorySize": 512,
+              "Timeout": 30,
+              "Environment": {
+                "Variables": {
+                  "USER_POOL_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"USER_POOL_ID\"]"
+                  },
+                  "CLIENT_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"CLIENT_ID\"]"
+                  },
+                  "TRANSACTIONS_TABLE": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"TRANSACTIONS_TABLE\"]"
+                  },
+                  "RECEIPTS_BUCKET": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"RECEIPTS_BUCKET\"]"
+                  }
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "SignupLogGroup"
+            ]
+          },
+          "ConfirmSignupLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": {
+                  "Ref": "ServerlessDeploymentBucket"
+                },
+                "S3Key": "serverless/expense-tracker/prod/1764093159361-2025-11-25T17:52:39.361Z/expense-tracker.zip"
+              },
+              "Handler": "auth.confirmSignup",
+              "Runtime": "nodejs18.x",
+              "FunctionName": "expense-tracker-prod-confirmSignup",
+              "MemorySize": 512,
+              "Timeout": 30,
+              "Environment": {
+                "Variables": {
+                  "USER_POOL_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"USER_POOL_ID\"]"
+                  },
+                  "CLIENT_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"CLIENT_ID\"]"
+                  },
+                  "TRANSACTIONS_TABLE": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"TRANSACTIONS_TABLE\"]"
+                  },
+                  "RECEIPTS_BUCKET": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"RECEIPTS_BUCKET\"]"
+                  }
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "ConfirmSignupLogGroup"
+            ]
+          },
+          "LoginLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": {
+                  "Ref": "ServerlessDeploymentBucket"
+                },
+                "S3Key": "serverless/expense-tracker/prod/1764093159361-2025-11-25T17:52:39.361Z/expense-tracker.zip"
+              },
+              "Handler": "auth.login",
+              "Runtime": "nodejs18.x",
+              "FunctionName": "expense-tracker-prod-login",
+              "MemorySize": 512,
+              "Timeout": 30,
+              "Environment": {
+                "Variables": {
+                  "USER_POOL_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"USER_POOL_ID\"]"
+                  },
+                  "CLIENT_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"CLIENT_ID\"]"
+                  },
+                  "TRANSACTIONS_TABLE": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"TRANSACTIONS_TABLE\"]"
+                  },
+                  "RECEIPTS_BUCKET": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"RECEIPTS_BUCKET\"]"
+                  }
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "LoginLogGroup"
+            ]
+          },
+          "GetUserLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": {
+                  "Ref": "ServerlessDeploymentBucket"
+                },
+                "S3Key": "serverless/expense-tracker/prod/1764093159361-2025-11-25T17:52:39.361Z/expense-tracker.zip"
+              },
+              "Handler": "auth.getUser",
+              "Runtime": "nodejs18.x",
+              "FunctionName": "expense-tracker-prod-getUser",
+              "MemorySize": 512,
+              "Timeout": 30,
+              "Environment": {
+                "Variables": {
+                  "USER_POOL_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"USER_POOL_ID\"]"
+                  },
+                  "CLIENT_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"CLIENT_ID\"]"
+                  },
+                  "TRANSACTIONS_TABLE": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"TRANSACTIONS_TABLE\"]"
+                  },
+                  "RECEIPTS_BUCKET": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"RECEIPTS_BUCKET\"]"
+                  }
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "GetUserLogGroup"
+            ]
+          },
+          "CreateExpenseLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": {
+                  "Ref": "ServerlessDeploymentBucket"
+                },
+                "S3Key": "serverless/expense-tracker/prod/1764093159361-2025-11-25T17:52:39.361Z/expense-tracker.zip"
+              },
+              "Handler": "expenses.createExpense",
+              "Runtime": "nodejs18.x",
+              "FunctionName": "expense-tracker-prod-createExpense",
+              "MemorySize": 512,
+              "Timeout": 30,
+              "Environment": {
+                "Variables": {
+                  "USER_POOL_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"USER_POOL_ID\"]"
+                  },
+                  "CLIENT_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"CLIENT_ID\"]"
+                  },
+                  "TRANSACTIONS_TABLE": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"TRANSACTIONS_TABLE\"]"
+                  },
+                  "RECEIPTS_BUCKET": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"RECEIPTS_BUCKET\"]"
+                  }
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "CreateExpenseLogGroup"
+            ]
+          },
+          "GetExpensesLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": {
+                  "Ref": "ServerlessDeploymentBucket"
+                },
+                "S3Key": "serverless/expense-tracker/prod/1764093159361-2025-11-25T17:52:39.361Z/expense-tracker.zip"
+              },
+              "Handler": "expenses.getExpenses",
+              "Runtime": "nodejs18.x",
+              "FunctionName": "expense-tracker-prod-getExpenses",
+              "MemorySize": 512,
+              "Timeout": 30,
+              "Environment": {
+                "Variables": {
+                  "USER_POOL_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"USER_POOL_ID\"]"
+                  },
+                  "CLIENT_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"CLIENT_ID\"]"
+                  },
+                  "TRANSACTIONS_TABLE": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"TRANSACTIONS_TABLE\"]"
+                  },
+                  "RECEIPTS_BUCKET": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"RECEIPTS_BUCKET\"]"
+                  }
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "GetExpensesLogGroup"
+            ]
+          },
+          "GetExpenseLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": {
+                  "Ref": "ServerlessDeploymentBucket"
+                },
+                "S3Key": "serverless/expense-tracker/prod/1764093159361-2025-11-25T17:52:39.361Z/expense-tracker.zip"
+              },
+              "Handler": "expenses.getExpense",
+              "Runtime": "nodejs18.x",
+              "FunctionName": "expense-tracker-prod-getExpense",
+              "MemorySize": 512,
+              "Timeout": 30,
+              "Environment": {
+                "Variables": {
+                  "USER_POOL_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"USER_POOL_ID\"]"
+                  },
+                  "CLIENT_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"CLIENT_ID\"]"
+                  },
+                  "TRANSACTIONS_TABLE": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"TRANSACTIONS_TABLE\"]"
+                  },
+                  "RECEIPTS_BUCKET": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"RECEIPTS_BUCKET\"]"
+                  }
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "GetExpenseLogGroup"
+            ]
+          },
+          "UpdateExpenseLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": {
+                  "Ref": "ServerlessDeploymentBucket"
+                },
+                "S3Key": "serverless/expense-tracker/prod/1764093159361-2025-11-25T17:52:39.361Z/expense-tracker.zip"
+              },
+              "Handler": "expenses.updateExpense",
+              "Runtime": "nodejs18.x",
+              "FunctionName": "expense-tracker-prod-updateExpense",
+              "MemorySize": 512,
+              "Timeout": 30,
+              "Environment": {
+                "Variables": {
+                  "USER_POOL_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"USER_POOL_ID\"]"
+                  },
+                  "CLIENT_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"CLIENT_ID\"]"
+                  },
+                  "TRANSACTIONS_TABLE": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"TRANSACTIONS_TABLE\"]"
+                  },
+                  "RECEIPTS_BUCKET": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"RECEIPTS_BUCKET\"]"
+                  }
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "UpdateExpenseLogGroup"
+            ]
+          },
+          "DeleteExpenseLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": {
+                  "Ref": "ServerlessDeploymentBucket"
+                },
+                "S3Key": "serverless/expense-tracker/prod/1764093159361-2025-11-25T17:52:39.361Z/expense-tracker.zip"
+              },
+              "Handler": "expenses.deleteExpense",
+              "Runtime": "nodejs18.x",
+              "FunctionName": "expense-tracker-prod-deleteExpense",
+              "MemorySize": 512,
+              "Timeout": 30,
+              "Environment": {
+                "Variables": {
+                  "USER_POOL_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"USER_POOL_ID\"]"
+                  },
+                  "CLIENT_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"CLIENT_ID\"]"
+                  },
+                  "TRANSACTIONS_TABLE": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"TRANSACTIONS_TABLE\"]"
+                  },
+                  "RECEIPTS_BUCKET": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"RECEIPTS_BUCKET\"]"
+                  }
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "DeleteExpenseLogGroup"
+            ]
+          },
+          "GetDashboardLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": {
+                  "Ref": "ServerlessDeploymentBucket"
+                },
+                "S3Key": "serverless/expense-tracker/prod/1764093159361-2025-11-25T17:52:39.361Z/expense-tracker.zip"
+              },
+              "Handler": "expenses.getDashboard",
+              "Runtime": "nodejs18.x",
+              "FunctionName": "expense-tracker-prod-getDashboard",
+              "MemorySize": 512,
+              "Timeout": 30,
+              "Environment": {
+                "Variables": {
+                  "USER_POOL_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"USER_POOL_ID\"]"
+                  },
+                  "CLIENT_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"CLIENT_ID\"]"
+                  },
+                  "TRANSACTIONS_TABLE": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"TRANSACTIONS_TABLE\"]"
+                  },
+                  "RECEIPTS_BUCKET": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"RECEIPTS_BUCKET\"]"
+                  }
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "GetDashboardLogGroup"
+            ]
+          },
+          "GetUploadUrlLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": {
+                  "Ref": "ServerlessDeploymentBucket"
+                },
+                "S3Key": "serverless/expense-tracker/prod/1764093159361-2025-11-25T17:52:39.361Z/expense-tracker.zip"
+              },
+              "Handler": "uploadUrl.getUploadUrl",
+              "Runtime": "nodejs18.x",
+              "FunctionName": "expense-tracker-prod-getUploadUrl",
+              "MemorySize": 512,
+              "Timeout": 30,
+              "Environment": {
+                "Variables": {
+                  "USER_POOL_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"USER_POOL_ID\"]"
+                  },
+                  "CLIENT_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"CLIENT_ID\"]"
+                  },
+                  "TRANSACTIONS_TABLE": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"TRANSACTIONS_TABLE\"]"
+                  },
+                  "RECEIPTS_BUCKET": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"RECEIPTS_BUCKET\"]"
+                  }
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "GetUploadUrlLogGroup"
+            ]
+          },
+          "ParseReceiptLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": {
+                  "Ref": "ServerlessDeploymentBucket"
+                },
+                "S3Key": "serverless/expense-tracker/prod/1764093159361-2025-11-25T17:52:39.361Z/expense-tracker.zip"
+              },
+              "Handler": "parseReceipt.parseReceipt",
+              "Runtime": "nodejs18.x",
+              "FunctionName": "expense-tracker-prod-parseReceipt",
+              "MemorySize": 512,
+              "Timeout": 29,
+              "Environment": {
+                "Variables": {
+                  "USER_POOL_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"USER_POOL_ID\"]"
+                  },
+                  "CLIENT_ID": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"CLIENT_ID\"]"
+                  },
+                  "TRANSACTIONS_TABLE": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"TRANSACTIONS_TABLE\"]"
+                  },
+                  "RECEIPTS_BUCKET": {
+                    "$ref": "$[\"service\"][\"provider\"][\"environment\"][\"RECEIPTS_BUCKET\"]"
+                  }
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "ParseReceiptLogGroup"
+            ]
+          },
+          "SignupLambdaVersionZMa5sGtHaFOQYeYAnpJJQxL9x6VkFwL4L32weAw": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "SignupLambdaFunction"
+              },
+              "CodeSha256": "EV1EtWrDReQM1Rdd4lyWNIvxEln2TQRuGPZe9HChORA="
+            }
+          },
+          "ConfirmSignupLambdaVersionE5eJ5AL3UbDfUfFWr4UQjkJJ7aWIxO3wKFKLazwM": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "ConfirmSignupLambdaFunction"
+              },
+              "CodeSha256": "EV1EtWrDReQM1Rdd4lyWNIvxEln2TQRuGPZe9HChORA="
+            }
+          },
+          "LoginLambdaVersionkPsHiCkf1nrkLaya42rdR3JuYc5aM9mrvEmPrlO6AE": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "LoginLambdaFunction"
+              },
+              "CodeSha256": "EV1EtWrDReQM1Rdd4lyWNIvxEln2TQRuGPZe9HChORA="
+            }
+          },
+          "GetUserLambdaVersionLNykF8RkGNA2A7ZIdrli5hxUmUmFUG6MJSowFY3k": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "GetUserLambdaFunction"
+              },
+              "CodeSha256": "EV1EtWrDReQM1Rdd4lyWNIvxEln2TQRuGPZe9HChORA="
+            }
+          },
+          "CreateExpenseLambdaVersionQDBcPUJNyByFQGS9yfOH5O4fUQZFrfEEw2cKe9s0A4": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "CreateExpenseLambdaFunction"
+              },
+              "CodeSha256": "EV1EtWrDReQM1Rdd4lyWNIvxEln2TQRuGPZe9HChORA="
+            }
+          },
+          "GetExpensesLambdaVersion7NDcWRA3qbkX9wwTQG7i2KfpjnTT1cXCid2irCwQ": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "GetExpensesLambdaFunction"
+              },
+              "CodeSha256": "EV1EtWrDReQM1Rdd4lyWNIvxEln2TQRuGPZe9HChORA="
+            }
+          },
+          "GetExpenseLambdaVersionmW5neWCK7Rr9TtB2Sd7fvPO0z0J1v7T7nVCRZgVw": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "GetExpenseLambdaFunction"
+              },
+              "CodeSha256": "EV1EtWrDReQM1Rdd4lyWNIvxEln2TQRuGPZe9HChORA="
+            }
+          },
+          "UpdateExpenseLambdaVersionFTs2mPYnJU0jWBMhsaIHVpbEjVgaeIwzbSPdlU": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "UpdateExpenseLambdaFunction"
+              },
+              "CodeSha256": "EV1EtWrDReQM1Rdd4lyWNIvxEln2TQRuGPZe9HChORA="
+            }
+          },
+          "DeleteExpenseLambdaVersionaqtgAEAhyqOl1Dn34NXt2qQrHvjykqMt3MbDH8Mn8": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "DeleteExpenseLambdaFunction"
+              },
+              "CodeSha256": "EV1EtWrDReQM1Rdd4lyWNIvxEln2TQRuGPZe9HChORA="
+            }
+          },
+          "GetDashboardLambdaVersioncezSprJQQ34DGhZQsn1ILeDasatn6fbHCcBCO1Tg": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "GetDashboardLambdaFunction"
+              },
+              "CodeSha256": "EV1EtWrDReQM1Rdd4lyWNIvxEln2TQRuGPZe9HChORA="
+            }
+          },
+          "GetUploadUrlLambdaVersioncOk3LcUSCNjqFfmCFgET3Qo0hfF32GCYsQtueYKkW58": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "GetUploadUrlLambdaFunction"
+              },
+              "CodeSha256": "EV1EtWrDReQM1Rdd4lyWNIvxEln2TQRuGPZe9HChORA="
+            }
+          },
+          "ParseReceiptLambdaVersion420J3Po9PiJDJL5jHRfXFNtBFSmyMQroGTHy7Yv9kw": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "ParseReceiptLambdaFunction"
+              },
+              "CodeSha256": "EV1EtWrDReQM1Rdd4lyWNIvxEln2TQRuGPZe9HChORA="
+            }
+          },
+          "ApiGatewayRestApi": {
+            "Type": "AWS::ApiGateway::RestApi",
+            "Properties": {
+              "Name": "prod-expense-tracker",
+              "BinaryMediaTypes": [
+                "multipart/form-data",
+                "*/*"
+              ],
+              "EndpointConfiguration": {
+                "Types": [
+                  "EDGE"
+                ]
+              },
+              "Policy": ""
+            }
+          },
+          "ApiGatewayResourceAuth": {
+            "Type": "AWS::ApiGateway::Resource",
+            "Properties": {
+              "ParentId": {
+                "Fn::GetAtt": [
+                  "ApiGatewayRestApi",
+                  "RootResourceId"
+                ]
+              },
+              "PathPart": "auth",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayResourceAuthSignup": {
+            "Type": "AWS::ApiGateway::Resource",
+            "Properties": {
+              "ParentId": {
+                "Ref": "ApiGatewayResourceAuth"
+              },
+              "PathPart": "signup",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayResourceAuthConfirm": {
+            "Type": "AWS::ApiGateway::Resource",
+            "Properties": {
+              "ParentId": {
+                "Ref": "ApiGatewayResourceAuth"
+              },
+              "PathPart": "confirm",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayResourceAuthLogin": {
+            "Type": "AWS::ApiGateway::Resource",
+            "Properties": {
+              "ParentId": {
+                "Ref": "ApiGatewayResourceAuth"
+              },
+              "PathPart": "login",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayResourceAuthUser": {
+            "Type": "AWS::ApiGateway::Resource",
+            "Properties": {
+              "ParentId": {
+                "Ref": "ApiGatewayResourceAuth"
+              },
+              "PathPart": "user",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayResourceExpenses": {
+            "Type": "AWS::ApiGateway::Resource",
+            "Properties": {
+              "ParentId": {
+                "Fn::GetAtt": [
+                  "ApiGatewayRestApi",
+                  "RootResourceId"
+                ]
+              },
+              "PathPart": "expenses",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayResourceExpensesTransactionidVar": {
+            "Type": "AWS::ApiGateway::Resource",
+            "Properties": {
+              "ParentId": {
+                "Ref": "ApiGatewayResourceExpenses"
+              },
+              "PathPart": "{transactionId}",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayResourceDashboard": {
+            "Type": "AWS::ApiGateway::Resource",
+            "Properties": {
+              "ParentId": {
+                "Fn::GetAtt": [
+                  "ApiGatewayRestApi",
+                  "RootResourceId"
+                ]
+              },
+              "PathPart": "dashboard",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayResourceDashboardSummary": {
+            "Type": "AWS::ApiGateway::Resource",
+            "Properties": {
+              "ParentId": {
+                "Ref": "ApiGatewayResourceDashboard"
+              },
+              "PathPart": "summary",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayResourceUploadDashurl": {
+            "Type": "AWS::ApiGateway::Resource",
+            "Properties": {
+              "ParentId": {
+                "Fn::GetAtt": [
+                  "ApiGatewayRestApi",
+                  "RootResourceId"
+                ]
+              },
+              "PathPart": "upload-url",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayResourceParseDashreceipt": {
+            "Type": "AWS::ApiGateway::Resource",
+            "Properties": {
+              "ParentId": {
+                "Fn::GetAtt": [
+                  "ApiGatewayRestApi",
+                  "RootResourceId"
+                ]
+              },
+              "PathPart": "parse-receipt",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayMethodAuthSignupOptions": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "AuthorizationType": "NONE",
+              "HttpMethod": "OPTIONS",
+              "MethodResponses": [
+                {
+                  "StatusCode": "200",
+                  "ResponseParameters": {
+                    "method.response.header.Access-Control-Allow-Origin": true,
+                    "method.response.header.Access-Control-Allow-Headers": true,
+                    "method.response.header.Access-Control-Allow-Methods": true
+                  },
+                  "ResponseModels": {}
+                }
+              ],
+              "RequestParameters": {},
+              "Integration": {
+                "Type": "MOCK",
+                "RequestTemplates": {
+                  "application/json": "{statusCode:200}"
+                },
+                "ContentHandling": "CONVERT_TO_TEXT",
+                "IntegrationResponses": [
+                  {
+                    "StatusCode": "200",
+                    "ResponseParameters": {
+                      "method.response.header.Access-Control-Allow-Origin": "'https://teckstart.com'",
+                      "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+                      "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST'"
+                    },
+                    "ResponseTemplates": {
+                      "application/json": ""
+                    }
+                  }
+                ]
+              },
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceAuthSignup"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayMethodAuthConfirmOptions": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "AuthorizationType": "NONE",
+              "HttpMethod": "OPTIONS",
+              "MethodResponses": [
+                {
+                  "StatusCode": "200",
+                  "ResponseParameters": {
+                    "method.response.header.Access-Control-Allow-Origin": true,
+                    "method.response.header.Access-Control-Allow-Headers": true,
+                    "method.response.header.Access-Control-Allow-Methods": true
+                  },
+                  "ResponseModels": {}
+                }
+              ],
+              "RequestParameters": {},
+              "Integration": {
+                "Type": "MOCK",
+                "RequestTemplates": {
+                  "application/json": "{statusCode:200}"
+                },
+                "ContentHandling": "CONVERT_TO_TEXT",
+                "IntegrationResponses": [
+                  {
+                    "StatusCode": "200",
+                    "ResponseParameters": {
+                      "method.response.header.Access-Control-Allow-Origin": "'https://teckstart.com'",
+                      "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+                      "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST'"
+                    },
+                    "ResponseTemplates": {
+                      "application/json": ""
+                    }
+                  }
+                ]
+              },
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceAuthConfirm"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayMethodAuthLoginOptions": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "AuthorizationType": "NONE",
+              "HttpMethod": "OPTIONS",
+              "MethodResponses": [
+                {
+                  "StatusCode": "200",
+                  "ResponseParameters": {
+                    "method.response.header.Access-Control-Allow-Origin": true,
+                    "method.response.header.Access-Control-Allow-Headers": true,
+                    "method.response.header.Access-Control-Allow-Methods": true
+                  },
+                  "ResponseModels": {}
+                }
+              ],
+              "RequestParameters": {},
+              "Integration": {
+                "Type": "MOCK",
+                "RequestTemplates": {
+                  "application/json": "{statusCode:200}"
+                },
+                "ContentHandling": "CONVERT_TO_TEXT",
+                "IntegrationResponses": [
+                  {
+                    "StatusCode": "200",
+                    "ResponseParameters": {
+                      "method.response.header.Access-Control-Allow-Origin": "'https://teckstart.com'",
+                      "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+                      "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST'"
+                    },
+                    "ResponseTemplates": {
+                      "application/json": ""
+                    }
+                  }
+                ]
+              },
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceAuthLogin"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayMethodAuthUserOptions": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "AuthorizationType": "NONE",
+              "HttpMethod": "OPTIONS",
+              "MethodResponses": [
+                {
+                  "StatusCode": "200",
+                  "ResponseParameters": {
+                    "method.response.header.Access-Control-Allow-Origin": true,
+                    "method.response.header.Access-Control-Allow-Headers": true,
+                    "method.response.header.Access-Control-Allow-Methods": true
+                  },
+                  "ResponseModels": {}
+                }
+              ],
+              "RequestParameters": {},
+              "Integration": {
+                "Type": "MOCK",
+                "RequestTemplates": {
+                  "application/json": "{statusCode:200}"
+                },
+                "ContentHandling": "CONVERT_TO_TEXT",
+                "IntegrationResponses": [
+                  {
+                    "StatusCode": "200",
+                    "ResponseParameters": {
+                      "method.response.header.Access-Control-Allow-Origin": "'https://teckstart.com'",
+                      "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+                      "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET'"
+                    },
+                    "ResponseTemplates": {
+                      "application/json": ""
+                    }
+                  }
+                ]
+              },
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceAuthUser"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayMethodExpensesOptions": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "AuthorizationType": "NONE",
+              "HttpMethod": "OPTIONS",
+              "MethodResponses": [
+                {
+                  "StatusCode": "200",
+                  "ResponseParameters": {
+                    "method.response.header.Access-Control-Allow-Origin": true,
+                    "method.response.header.Access-Control-Allow-Headers": true,
+                    "method.response.header.Access-Control-Allow-Methods": true
+                  },
+                  "ResponseModels": {}
+                }
+              ],
+              "RequestParameters": {},
+              "Integration": {
+                "Type": "MOCK",
+                "RequestTemplates": {
+                  "application/json": "{statusCode:200}"
+                },
+                "ContentHandling": "CONVERT_TO_TEXT",
+                "IntegrationResponses": [
+                  {
+                    "StatusCode": "200",
+                    "ResponseParameters": {
+                      "method.response.header.Access-Control-Allow-Origin": "'https://teckstart.com'",
+                      "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+                      "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,POST'"
+                    },
+                    "ResponseTemplates": {
+                      "application/json": ""
+                    }
+                  }
+                ]
+              },
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceExpenses"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayMethodExpensesTransactionidVarOptions": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "AuthorizationType": "NONE",
+              "HttpMethod": "OPTIONS",
+              "MethodResponses": [
+                {
+                  "StatusCode": "200",
+                  "ResponseParameters": {
+                    "method.response.header.Access-Control-Allow-Origin": true,
+                    "method.response.header.Access-Control-Allow-Headers": true,
+                    "method.response.header.Access-Control-Allow-Methods": true
+                  },
+                  "ResponseModels": {}
+                }
+              ],
+              "RequestParameters": {},
+              "Integration": {
+                "Type": "MOCK",
+                "RequestTemplates": {
+                  "application/json": "{statusCode:200}"
+                },
+                "ContentHandling": "CONVERT_TO_TEXT",
+                "IntegrationResponses": [
+                  {
+                    "StatusCode": "200",
+                    "ResponseParameters": {
+                      "method.response.header.Access-Control-Allow-Origin": "'https://teckstart.com'",
+                      "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+                      "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,DELETE,PUT,GET'"
+                    },
+                    "ResponseTemplates": {
+                      "application/json": ""
+                    }
+                  }
+                ]
+              },
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceExpensesTransactionidVar"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayMethodDashboardSummaryOptions": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "AuthorizationType": "NONE",
+              "HttpMethod": "OPTIONS",
+              "MethodResponses": [
+                {
+                  "StatusCode": "200",
+                  "ResponseParameters": {
+                    "method.response.header.Access-Control-Allow-Origin": true,
+                    "method.response.header.Access-Control-Allow-Headers": true,
+                    "method.response.header.Access-Control-Allow-Methods": true
+                  },
+                  "ResponseModels": {}
+                }
+              ],
+              "RequestParameters": {},
+              "Integration": {
+                "Type": "MOCK",
+                "RequestTemplates": {
+                  "application/json": "{statusCode:200}"
+                },
+                "ContentHandling": "CONVERT_TO_TEXT",
+                "IntegrationResponses": [
+                  {
+                    "StatusCode": "200",
+                    "ResponseParameters": {
+                      "method.response.header.Access-Control-Allow-Origin": "'https://teckstart.com'",
+                      "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+                      "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET'"
+                    },
+                    "ResponseTemplates": {
+                      "application/json": ""
+                    }
+                  }
+                ]
+              },
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceDashboardSummary"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayMethodUploadDashurlOptions": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "AuthorizationType": "NONE",
+              "HttpMethod": "OPTIONS",
+              "MethodResponses": [
+                {
+                  "StatusCode": "200",
+                  "ResponseParameters": {
+                    "method.response.header.Access-Control-Allow-Origin": true,
+                    "method.response.header.Access-Control-Allow-Headers": true,
+                    "method.response.header.Access-Control-Allow-Methods": true
+                  },
+                  "ResponseModels": {}
+                }
+              ],
+              "RequestParameters": {},
+              "Integration": {
+                "Type": "MOCK",
+                "RequestTemplates": {
+                  "application/json": "{statusCode:200}"
+                },
+                "ContentHandling": "CONVERT_TO_TEXT",
+                "IntegrationResponses": [
+                  {
+                    "StatusCode": "200",
+                    "ResponseParameters": {
+                      "method.response.header.Access-Control-Allow-Origin": "'https://teckstart.com'",
+                      "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+                      "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST'"
+                    },
+                    "ResponseTemplates": {
+                      "application/json": ""
+                    }
+                  }
+                ]
+              },
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceUploadDashurl"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayMethodParseDashreceiptOptions": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "AuthorizationType": "NONE",
+              "HttpMethod": "OPTIONS",
+              "MethodResponses": [
+                {
+                  "StatusCode": "200",
+                  "ResponseParameters": {
+                    "method.response.header.Access-Control-Allow-Origin": true,
+                    "method.response.header.Access-Control-Allow-Headers": true,
+                    "method.response.header.Access-Control-Allow-Methods": true
+                  },
+                  "ResponseModels": {}
+                }
+              ],
+              "RequestParameters": {},
+              "Integration": {
+                "Type": "MOCK",
+                "RequestTemplates": {
+                  "application/json": "{statusCode:200}"
+                },
+                "ContentHandling": "CONVERT_TO_TEXT",
+                "IntegrationResponses": [
+                  {
+                    "StatusCode": "200",
+                    "ResponseParameters": {
+                      "method.response.header.Access-Control-Allow-Origin": "'https://teckstart.com'",
+                      "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+                      "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST'"
+                    },
+                    "ResponseTemplates": {
+                      "application/json": ""
+                    }
+                  }
+                ]
+              },
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceParseDashreceipt"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayMethodAuthSignupPost": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "HttpMethod": "POST",
+              "RequestParameters": {},
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceAuthSignup"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "ApiKeyRequired": false,
+              "AuthorizationType": "NONE",
+              "Integration": {
+                "IntegrationHttpMethod": "POST",
+                "Type": "AWS_PROXY",
+                "Uri": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":apigateway:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":lambda:path/2015-03-31/functions/",
+                      {
+                        "Fn::GetAtt": [
+                          "SignupLambdaFunction",
+                          "Arn"
+                        ]
+                      },
+                      "/invocations"
+                    ]
+                  ]
+                }
+              },
+              "MethodResponses": []
+            },
+            "DependsOn": [
+              "SignupLambdaPermissionApiGateway"
+            ]
+          },
+          "ApiGatewayMethodAuthConfirmPost": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "HttpMethod": "POST",
+              "RequestParameters": {},
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceAuthConfirm"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "ApiKeyRequired": false,
+              "AuthorizationType": "NONE",
+              "Integration": {
+                "IntegrationHttpMethod": "POST",
+                "Type": "AWS_PROXY",
+                "Uri": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":apigateway:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":lambda:path/2015-03-31/functions/",
+                      {
+                        "Fn::GetAtt": [
+                          "ConfirmSignupLambdaFunction",
+                          "Arn"
+                        ]
+                      },
+                      "/invocations"
+                    ]
+                  ]
+                }
+              },
+              "MethodResponses": []
+            },
+            "DependsOn": [
+              "ConfirmSignupLambdaPermissionApiGateway"
+            ]
+          },
+          "ApiGatewayMethodAuthLoginPost": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "HttpMethod": "POST",
+              "RequestParameters": {},
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceAuthLogin"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "ApiKeyRequired": false,
+              "AuthorizationType": "NONE",
+              "Integration": {
+                "IntegrationHttpMethod": "POST",
+                "Type": "AWS_PROXY",
+                "Uri": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":apigateway:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":lambda:path/2015-03-31/functions/",
+                      {
+                        "Fn::GetAtt": [
+                          "LoginLambdaFunction",
+                          "Arn"
+                        ]
+                      },
+                      "/invocations"
+                    ]
+                  ]
+                }
+              },
+              "MethodResponses": []
+            },
+            "DependsOn": [
+              "LoginLambdaPermissionApiGateway"
+            ]
+          },
+          "ApiGatewayMethodAuthUserGet": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "HttpMethod": "GET",
+              "RequestParameters": {},
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceAuthUser"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "ApiKeyRequired": false,
+              "AuthorizationType": "COGNITO_USER_POOLS",
+              "AuthorizerId": {
+                "Ref": "ApiGatewayAuthorizer"
+              },
+              "Integration": {
+                "IntegrationHttpMethod": "POST",
+                "Type": "AWS_PROXY",
+                "Uri": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":apigateway:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":lambda:path/2015-03-31/functions/",
+                      {
+                        "Fn::GetAtt": [
+                          "GetUserLambdaFunction",
+                          "Arn"
+                        ]
+                      },
+                      "/invocations"
+                    ]
+                  ]
+                }
+              },
+              "MethodResponses": []
+            },
+            "DependsOn": [
+              "GetUserLambdaPermissionApiGateway"
+            ]
+          },
+          "ApiGatewayMethodExpensesPost": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "HttpMethod": "POST",
+              "RequestParameters": {},
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceExpenses"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "ApiKeyRequired": false,
+              "AuthorizationType": "COGNITO_USER_POOLS",
+              "AuthorizerId": {
+                "Ref": "ApiGatewayAuthorizer"
+              },
+              "Integration": {
+                "IntegrationHttpMethod": "POST",
+                "Type": "AWS_PROXY",
+                "Uri": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":apigateway:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":lambda:path/2015-03-31/functions/",
+                      {
+                        "Fn::GetAtt": [
+                          "CreateExpenseLambdaFunction",
+                          "Arn"
+                        ]
+                      },
+                      "/invocations"
+                    ]
+                  ]
+                }
+              },
+              "MethodResponses": []
+            },
+            "DependsOn": [
+              "CreateExpenseLambdaPermissionApiGateway"
+            ]
+          },
+          "ApiGatewayMethodExpensesGet": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "HttpMethod": "GET",
+              "RequestParameters": {},
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceExpenses"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "ApiKeyRequired": false,
+              "AuthorizationType": "COGNITO_USER_POOLS",
+              "AuthorizerId": {
+                "Ref": "ApiGatewayAuthorizer"
+              },
+              "Integration": {
+                "IntegrationHttpMethod": "POST",
+                "Type": "AWS_PROXY",
+                "Uri": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":apigateway:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":lambda:path/2015-03-31/functions/",
+                      {
+                        "Fn::GetAtt": [
+                          "GetExpensesLambdaFunction",
+                          "Arn"
+                        ]
+                      },
+                      "/invocations"
+                    ]
+                  ]
+                }
+              },
+              "MethodResponses": []
+            },
+            "DependsOn": [
+              "GetExpensesLambdaPermissionApiGateway"
+            ]
+          },
+          "ApiGatewayMethodExpensesTransactionidVarGet": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "HttpMethod": "GET",
+              "RequestParameters": {},
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceExpensesTransactionidVar"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "ApiKeyRequired": false,
+              "AuthorizationType": "COGNITO_USER_POOLS",
+              "AuthorizerId": {
+                "Ref": "ApiGatewayAuthorizer"
+              },
+              "Integration": {
+                "IntegrationHttpMethod": "POST",
+                "Type": "AWS_PROXY",
+                "Uri": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":apigateway:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":lambda:path/2015-03-31/functions/",
+                      {
+                        "Fn::GetAtt": [
+                          "GetExpenseLambdaFunction",
+                          "Arn"
+                        ]
+                      },
+                      "/invocations"
+                    ]
+                  ]
+                }
+              },
+              "MethodResponses": []
+            },
+            "DependsOn": [
+              "GetExpenseLambdaPermissionApiGateway"
+            ]
+          },
+          "ApiGatewayMethodExpensesTransactionidVarPut": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "HttpMethod": "PUT",
+              "RequestParameters": {},
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceExpensesTransactionidVar"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "ApiKeyRequired": false,
+              "AuthorizationType": "COGNITO_USER_POOLS",
+              "AuthorizerId": {
+                "Ref": "ApiGatewayAuthorizer"
+              },
+              "Integration": {
+                "IntegrationHttpMethod": "POST",
+                "Type": "AWS_PROXY",
+                "Uri": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":apigateway:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":lambda:path/2015-03-31/functions/",
+                      {
+                        "Fn::GetAtt": [
+                          "UpdateExpenseLambdaFunction",
+                          "Arn"
+                        ]
+                      },
+                      "/invocations"
+                    ]
+                  ]
+                }
+              },
+              "MethodResponses": []
+            },
+            "DependsOn": [
+              "UpdateExpenseLambdaPermissionApiGateway"
+            ]
+          },
+          "ApiGatewayMethodExpensesTransactionidVarDelete": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "HttpMethod": "DELETE",
+              "RequestParameters": {},
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceExpensesTransactionidVar"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "ApiKeyRequired": false,
+              "AuthorizationType": "COGNITO_USER_POOLS",
+              "AuthorizerId": {
+                "Ref": "ApiGatewayAuthorizer"
+              },
+              "Integration": {
+                "IntegrationHttpMethod": "POST",
+                "Type": "AWS_PROXY",
+                "Uri": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":apigateway:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":lambda:path/2015-03-31/functions/",
+                      {
+                        "Fn::GetAtt": [
+                          "DeleteExpenseLambdaFunction",
+                          "Arn"
+                        ]
+                      },
+                      "/invocations"
+                    ]
+                  ]
+                }
+              },
+              "MethodResponses": []
+            },
+            "DependsOn": [
+              "DeleteExpenseLambdaPermissionApiGateway"
+            ]
+          },
+          "ApiGatewayMethodDashboardSummaryGet": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "HttpMethod": "GET",
+              "RequestParameters": {},
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceDashboardSummary"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "ApiKeyRequired": false,
+              "AuthorizationType": "COGNITO_USER_POOLS",
+              "AuthorizerId": {
+                "Ref": "ApiGatewayAuthorizer"
+              },
+              "Integration": {
+                "IntegrationHttpMethod": "POST",
+                "Type": "AWS_PROXY",
+                "Uri": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":apigateway:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":lambda:path/2015-03-31/functions/",
+                      {
+                        "Fn::GetAtt": [
+                          "GetDashboardLambdaFunction",
+                          "Arn"
+                        ]
+                      },
+                      "/invocations"
+                    ]
+                  ]
+                }
+              },
+              "MethodResponses": []
+            },
+            "DependsOn": [
+              "GetDashboardLambdaPermissionApiGateway"
+            ]
+          },
+          "ApiGatewayMethodUploadDashurlPost": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "HttpMethod": "POST",
+              "RequestParameters": {},
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceUploadDashurl"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "ApiKeyRequired": false,
+              "AuthorizationType": "COGNITO_USER_POOLS",
+              "AuthorizerId": {
+                "Ref": "ApiGatewayAuthorizer"
+              },
+              "Integration": {
+                "IntegrationHttpMethod": "POST",
+                "Type": "AWS_PROXY",
+                "Uri": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":apigateway:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":lambda:path/2015-03-31/functions/",
+                      {
+                        "Fn::GetAtt": [
+                          "GetUploadUrlLambdaFunction",
+                          "Arn"
+                        ]
+                      },
+                      "/invocations"
+                    ]
+                  ]
+                }
+              },
+              "MethodResponses": []
+            },
+            "DependsOn": [
+              "GetUploadUrlLambdaPermissionApiGateway"
+            ]
+          },
+          "ApiGatewayMethodParseDashreceiptPost": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "HttpMethod": "POST",
+              "RequestParameters": {},
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceParseDashreceipt"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "ApiKeyRequired": false,
+              "AuthorizationType": "COGNITO_USER_POOLS",
+              "AuthorizerId": {
+                "Ref": "ApiGatewayAuthorizer"
+              },
+              "Integration": {
+                "IntegrationHttpMethod": "POST",
+                "Type": "AWS_PROXY",
+                "Uri": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":apigateway:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":lambda:path/2015-03-31/functions/",
+                      {
+                        "Fn::GetAtt": [
+                          "ParseReceiptLambdaFunction",
+                          "Arn"
+                        ]
+                      },
+                      "/invocations"
+                    ]
+                  ]
+                }
+              },
+              "MethodResponses": []
+            },
+            "DependsOn": [
+              "ParseReceiptLambdaPermissionApiGateway"
+            ]
+          },
+          "ApiGatewayDeployment1764093155677": {
+            "Type": "AWS::ApiGateway::Deployment",
+            "Properties": {
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "StageName": "prod"
+            },
+            "DependsOn": [
+              "ApiGatewayMethodAuthSignupOptions",
+              "ApiGatewayMethodAuthConfirmOptions",
+              "ApiGatewayMethodAuthLoginOptions",
+              "ApiGatewayMethodAuthUserOptions",
+              "ApiGatewayMethodExpensesOptions",
+              "ApiGatewayMethodExpensesTransactionidVarOptions",
+              "ApiGatewayMethodDashboardSummaryOptions",
+              "ApiGatewayMethodUploadDashurlOptions",
+              "ApiGatewayMethodParseDashreceiptOptions",
+              "ApiGatewayMethodAuthSignupPost",
+              "ApiGatewayMethodAuthConfirmPost",
+              "ApiGatewayMethodAuthLoginPost",
+              "ApiGatewayMethodAuthUserGet",
+              "ApiGatewayMethodExpensesPost",
+              "ApiGatewayMethodExpensesGet",
+              "ApiGatewayMethodExpensesTransactionidVarGet",
+              "ApiGatewayMethodExpensesTransactionidVarPut",
+              "ApiGatewayMethodExpensesTransactionidVarDelete",
+              "ApiGatewayMethodDashboardSummaryGet",
+              "ApiGatewayMethodUploadDashurlPost",
+              "ApiGatewayMethodParseDashreceiptPost"
+            ]
+          },
+          "SignupLambdaPermissionApiGateway": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "SignupLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "ApiGatewayRestApi"
+                    },
+                    "/*/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "ConfirmSignupLambdaPermissionApiGateway": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "ConfirmSignupLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "ApiGatewayRestApi"
+                    },
+                    "/*/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "LoginLambdaPermissionApiGateway": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "LoginLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "ApiGatewayRestApi"
+                    },
+                    "/*/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "GetUserLambdaPermissionApiGateway": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "GetUserLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "ApiGatewayRestApi"
+                    },
+                    "/*/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "CreateExpenseLambdaPermissionApiGateway": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "CreateExpenseLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "ApiGatewayRestApi"
+                    },
+                    "/*/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "GetExpensesLambdaPermissionApiGateway": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "GetExpensesLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "ApiGatewayRestApi"
+                    },
+                    "/*/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "GetExpenseLambdaPermissionApiGateway": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "GetExpenseLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "ApiGatewayRestApi"
+                    },
+                    "/*/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "UpdateExpenseLambdaPermissionApiGateway": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "UpdateExpenseLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "ApiGatewayRestApi"
+                    },
+                    "/*/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "DeleteExpenseLambdaPermissionApiGateway": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "DeleteExpenseLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "ApiGatewayRestApi"
+                    },
+                    "/*/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "GetDashboardLambdaPermissionApiGateway": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "GetDashboardLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "ApiGatewayRestApi"
+                    },
+                    "/*/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "GetUploadUrlLambdaPermissionApiGateway": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "GetUploadUrlLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "ApiGatewayRestApi"
+                    },
+                    "/*/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "ParseReceiptLambdaPermissionApiGateway": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "ParseReceiptLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "ApiGatewayRestApi"
+                    },
+                    "/*/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "CognitoUserPool": {
+            "Type": "AWS::Cognito::UserPool",
+            "Properties": {
+              "UserPoolName": "expense-tracker-user-pool-prod",
+              "AutoVerifiedAttributes": [
+                "email"
+              ],
+              "UsernameAttributes": [
+                "email"
+              ],
+              "Schema": [
+                {
+                  "Name": "email",
+                  "Required": true,
+                  "Mutable": false
+                }
+              ],
+              "Policies": {
+                "PasswordPolicy": {
+                  "MinimumLength": 8,
+                  "RequireUppercase": true,
+                  "RequireLowercase": true,
+                  "RequireNumbers": true,
+                  "RequireSymbols": false
+                }
+              }
+            }
+          },
+          "CognitoUserPoolClient": {
+            "Type": "AWS::Cognito::UserPoolClient",
+            "Properties": {
+              "ClientName": "expense-tracker-client-prod",
+              "UserPoolId": {
+                "Ref": "CognitoUserPool"
+              },
+              "GenerateSecret": false,
+              "ExplicitAuthFlows": [
+                "ALLOW_USER_PASSWORD_AUTH",
+                "ALLOW_REFRESH_TOKEN_AUTH"
+              ],
+              "PreventUserExistenceErrors": "ENABLED",
+              "CallbackURLs": [
+                "https://teckstart.com/callback.html"
+              ],
+              "LogoutURLs": [
+                "https://teckstart.com"
+              ]
+            }
+          },
+          "ApiGatewayAuthorizer": {
+            "Type": "AWS::ApiGateway::Authorizer",
+            "Properties": {
+              "Name": "CognitoAuthorizer",
+              "Type": "COGNITO_USER_POOLS",
+              "IdentitySource": "method.request.header.Authorization",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "ProviderARNs": [
+                {
+                  "Fn::GetAtt": [
+                    "CognitoUserPool",
+                    "Arn"
+                  ]
+                }
+              ]
+            }
+          },
+          "TransactionsTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "expense-tracker-transactions-prod",
+              "BillingMode": "PAY_PER_REQUEST",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "userId",
+                  "AttributeType": "S"
+                },
+                {
+                  "AttributeName": "transactionId",
+                  "AttributeType": "S"
+                },
+                {
+                  "AttributeName": "uploadDate",
+                  "AttributeType": "S"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "userId",
+                  "KeyType": "HASH"
+                },
+                {
+                  "AttributeName": "transactionId",
+                  "KeyType": "RANGE"
+                }
+              ],
+              "GlobalSecondaryIndexes": [
+                {
+                  "IndexName": "userId-uploadDate-index",
+                  "KeySchema": [
+                    {
+                      "AttributeName": "userId",
+                      "KeyType": "HASH"
+                    },
+                    {
+                      "AttributeName": "uploadDate",
+                      "KeyType": "RANGE"
+                    }
+                  ],
+                  "Projection": {
+                    "ProjectionType": "ALL"
+                  }
+                }
+              ],
+              "Tags": [
+                {
+                  "Key": "Project",
+                  "Value": "ExpenseTracker"
+                },
+                {
+                  "Key": "Environment",
+                  "Value": "prod"
+                }
+              ]
+            }
+          },
+          "ReceiptsBucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+              "BucketName": "expense-tracker-receipts-prod-391907191624",
+              "CorsConfiguration": {
+                "CorsRules": [
+                  {
+                    "AllowedOrigins": [
+                      "https://teckstart.com"
+                    ],
+                    "AllowedMethods": [
+                      "GET",
+                      "PUT",
+                      "POST",
+                      "DELETE"
+                    ],
+                    "AllowedHeaders": [
+                      "*"
+                    ],
+                    "MaxAge": 3000
+                  }
+                ]
+              },
+              "PublicAccessBlockConfiguration": {
+                "BlockPublicAcls": true,
+                "BlockPublicPolicy": true,
+                "IgnorePublicAcls": true,
+                "RestrictPublicBuckets": true
+              },
+              "LifecycleConfiguration": {
+                "Rules": [
+                  {
+                    "Id": "ArchiveOldReceipts",
+                    "Status": "Enabled",
+                    "Transitions": [
+                      {
+                        "TransitionInDays": 90,
+                        "StorageClass": "GLACIER"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "Tags": [
+                {
+                  "Key": "Project",
+                  "Value": "ExpenseTracker"
+                },
+                {
+                  "Key": "Environment",
+                  "Value": "prod"
+                }
+              ]
+            }
+          },
+          "ReceiptsBucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+            "Properties": {
+              "Bucket": {
+                "Ref": "ReceiptsBucket"
+              },
+              "PolicyDocument": {
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": {
+                      "Service": "lambda.amazonaws.com"
+                    },
+                    "Action": [
+                      "s3:PutObject",
+                      "s3:GetObject",
+                      "s3:DeleteObject"
+                    ],
+                    "Resource": {
+                      "Fn::Sub": "${ReceiptsBucket.Arn}/*"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "Outputs": {
+          "ServerlessDeploymentBucketName": {
+            "Value": {
+              "Ref": "ServerlessDeploymentBucket"
+            },
+            "Export": {
+              "Name": "sls-expense-tracker-prod-ServerlessDeploymentBucketName"
+            }
+          },
+          "SignupLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "SignupLambdaVersionZMa5sGtHaFOQYeYAnpJJQxL9x6VkFwL4L32weAw"
+            },
+            "Export": {
+              "Name": "sls-expense-tracker-prod-SignupLambdaFunctionQualifiedArn"
+            }
+          },
+          "ConfirmSignupLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "ConfirmSignupLambdaVersionE5eJ5AL3UbDfUfFWr4UQjkJJ7aWIxO3wKFKLazwM"
+            },
+            "Export": {
+              "Name": "sls-expense-tracker-prod-ConfirmSignupLambdaFunctionQualifiedArn"
+            }
+          },
+          "LoginLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "LoginLambdaVersionkPsHiCkf1nrkLaya42rdR3JuYc5aM9mrvEmPrlO6AE"
+            },
+            "Export": {
+              "Name": "sls-expense-tracker-prod-LoginLambdaFunctionQualifiedArn"
+            }
+          },
+          "GetUserLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "GetUserLambdaVersionLNykF8RkGNA2A7ZIdrli5hxUmUmFUG6MJSowFY3k"
+            },
+            "Export": {
+              "Name": "sls-expense-tracker-prod-GetUserLambdaFunctionQualifiedArn"
+            }
+          },
+          "CreateExpenseLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "CreateExpenseLambdaVersionQDBcPUJNyByFQGS9yfOH5O4fUQZFrfEEw2cKe9s0A4"
+            },
+            "Export": {
+              "Name": "sls-expense-tracker-prod-CreateExpenseLambdaFunctionQualifiedArn"
+            }
+          },
+          "GetExpensesLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "GetExpensesLambdaVersion7NDcWRA3qbkX9wwTQG7i2KfpjnTT1cXCid2irCwQ"
+            },
+            "Export": {
+              "Name": "sls-expense-tracker-prod-GetExpensesLambdaFunctionQualifiedArn"
+            }
+          },
+          "GetExpenseLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "GetExpenseLambdaVersionmW5neWCK7Rr9TtB2Sd7fvPO0z0J1v7T7nVCRZgVw"
+            },
+            "Export": {
+              "Name": "sls-expense-tracker-prod-GetExpenseLambdaFunctionQualifiedArn"
+            }
+          },
+          "UpdateExpenseLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "UpdateExpenseLambdaVersionFTs2mPYnJU0jWBMhsaIHVpbEjVgaeIwzbSPdlU"
+            },
+            "Export": {
+              "Name": "sls-expense-tracker-prod-UpdateExpenseLambdaFunctionQualifiedArn"
+            }
+          },
+          "DeleteExpenseLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "DeleteExpenseLambdaVersionaqtgAEAhyqOl1Dn34NXt2qQrHvjykqMt3MbDH8Mn8"
+            },
+            "Export": {
+              "Name": "sls-expense-tracker-prod-DeleteExpenseLambdaFunctionQualifiedArn"
+            }
+          },
+          "GetDashboardLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "GetDashboardLambdaVersioncezSprJQQ34DGhZQsn1ILeDasatn6fbHCcBCO1Tg"
+            },
+            "Export": {
+              "Name": "sls-expense-tracker-prod-GetDashboardLambdaFunctionQualifiedArn"
+            }
+          },
+          "GetUploadUrlLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "GetUploadUrlLambdaVersioncOk3LcUSCNjqFfmCFgET3Qo0hfF32GCYsQtueYKkW58"
+            },
+            "Export": {
+              "Name": "sls-expense-tracker-prod-GetUploadUrlLambdaFunctionQualifiedArn"
+            }
+          },
+          "ParseReceiptLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "ParseReceiptLambdaVersion420J3Po9PiJDJL5jHRfXFNtBFSmyMQroGTHy7Yv9kw"
+            },
+            "Export": {
+              "Name": "sls-expense-tracker-prod-ParseReceiptLambdaFunctionQualifiedArn"
+            }
+          },
+          "ServiceEndpoint": {
+            "Description": "URL of the service endpoint",
+            "Value": {
+              "Fn::Join": [
+                "",
+                [
+                  "https://",
+                  {
+                    "Ref": "ApiGatewayRestApi"
+                  },
+                  ".execute-api.",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  ".",
+                  {
+                    "Ref": "AWS::URLSuffix"
+                  },
+                  "/prod"
+                ]
+              ]
+            },
+            "Export": {
+              "Name": "sls-expense-tracker-prod-ServiceEndpoint"
+            }
+          },
+          "ApiEndpoint": {
+            "Description": "API Gateway endpoint URL",
+            "Value": {
+              "Fn::Sub": "https://${ApiGatewayRestApi}.execute-api.us-east-1.amazonaws.com/prod"
+            }
+          },
+          "UserPoolId": {
+            "Description": "Cognito User Pool ID",
+            "Value": {
+              "Ref": "CognitoUserPool"
+            }
+          },
+          "UserPoolClientId": {
+            "Description": "Cognito User Pool Client ID",
+            "Value": {
+              "Ref": "CognitoUserPoolClient"
+            }
+          },
+          "TransactionsTableName": {
+            "Description": "DynamoDB Transactions Table Name",
+            "Value": {
+              "Ref": "TransactionsTable"
+            }
+          },
+          "ReceiptsBucketName": {
+            "Description": "S3 Receipts Bucket Name",
+            "Value": {
+              "Ref": "ReceiptsBucket"
+            }
+          }
+        }
+      },
+      "coreCloudFormationTemplate": {
+        "AWSTemplateFormatVersion": "2010-09-09",
+        "Description": "The AWS CloudFormation template for this Serverless application",
+        "Resources": {
+          "ServerlessDeploymentBucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+              "BucketEncryption": {
+                "ServerSideEncryptionConfiguration": [
+                  {
+                    "ServerSideEncryptionByDefault": {
+                      "SSEAlgorithm": "AES256"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "ServerlessDeploymentBucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+            "Properties": {
+              "Bucket": {
+                "Ref": "ServerlessDeploymentBucket"
+              },
+              "PolicyDocument": {
+                "Statement": [
+                  {
+                    "Action": "s3:*",
+                    "Effect": "Deny",
+                    "Principal": "*",
+                    "Resource": [
+                      {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "arn:",
+                            {
+                              "Ref": "AWS::Partition"
+                            },
+                            ":s3:::",
+                            {
+                              "Ref": "ServerlessDeploymentBucket"
+                            },
+                            "/*"
+                          ]
+                        ]
+                      },
+                      {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "arn:",
+                            {
+                              "Ref": "AWS::Partition"
+                            },
+                            ":s3:::",
+                            {
+                              "Ref": "ServerlessDeploymentBucket"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "Condition": {
+                      "Bool": {
+                        "aws:SecureTransport": false
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "Outputs": {
+          "ServerlessDeploymentBucketName": {
+            "Value": {
+              "Ref": "ServerlessDeploymentBucket"
+            }
+          }
+        }
+      },
+      "vpc": {}
+    },
+    "pluginsData": {},
+    "functions": {
+      "signup": {
+        "handler": "auth.signup",
+        "events": [
+          {
+            "http": {
+              "path": "auth/signup",
+              "method": "post",
+              "cors": {
+                "origin": "https://teckstart.com",
+                "methods": [
+                  "OPTIONS",
+                  "POST"
+                ],
+                "headers": [
+                  "Content-Type",
+                  "X-Amz-Date",
+                  "Authorization",
+                  "X-Api-Key",
+                  "X-Amz-Security-Token",
+                  "X-Amz-User-Agent"
+                ],
+                "allowCredentials": false
+              },
+              "integration": "AWS_PROXY"
+            }
+          }
+        ],
+        "name": "expense-tracker-prod-signup",
+        "package": {},
+        "memory": 512,
+        "timeout": 30,
+        "runtime": "nodejs18.x",
+        "vpc": {},
+        "versionLogicalId": "SignupLambdaVersionZMa5sGtHaFOQYeYAnpJJQxL9x6VkFwL4L32weAw"
+      },
+      "confirmSignup": {
+        "handler": "auth.confirmSignup",
+        "events": [
+          {
+            "http": {
+              "path": "auth/confirm",
+              "method": "post",
+              "cors": {
+                "origin": "https://teckstart.com",
+                "methods": [
+                  "OPTIONS",
+                  "POST"
+                ],
+                "headers": [
+                  "Content-Type",
+                  "X-Amz-Date",
+                  "Authorization",
+                  "X-Api-Key",
+                  "X-Amz-Security-Token",
+                  "X-Amz-User-Agent"
+                ],
+                "allowCredentials": false
+              },
+              "integration": "AWS_PROXY"
+            }
+          }
+        ],
+        "name": "expense-tracker-prod-confirmSignup",
+        "package": {},
+        "memory": 512,
+        "timeout": 30,
+        "runtime": "nodejs18.x",
+        "vpc": {},
+        "versionLogicalId": "ConfirmSignupLambdaVersionE5eJ5AL3UbDfUfFWr4UQjkJJ7aWIxO3wKFKLazwM"
+      },
+      "login": {
+        "handler": "auth.login",
+        "events": [
+          {
+            "http": {
+              "path": "auth/login",
+              "method": "post",
+              "cors": {
+                "origin": "https://teckstart.com",
+                "methods": [
+                  "OPTIONS",
+                  "POST"
+                ],
+                "headers": [
+                  "Content-Type",
+                  "X-Amz-Date",
+                  "Authorization",
+                  "X-Api-Key",
+                  "X-Amz-Security-Token",
+                  "X-Amz-User-Agent"
+                ],
+                "allowCredentials": false
+              },
+              "integration": "AWS_PROXY"
+            }
+          }
+        ],
+        "name": "expense-tracker-prod-login",
+        "package": {},
+        "memory": 512,
+        "timeout": 30,
+        "runtime": "nodejs18.x",
+        "vpc": {},
+        "versionLogicalId": "LoginLambdaVersionkPsHiCkf1nrkLaya42rdR3JuYc5aM9mrvEmPrlO6AE"
+      },
+      "getUser": {
+        "handler": "auth.getUser",
+        "events": [
+          {
+            "http": {
+              "path": "auth/user",
+              "method": "get",
+              "cors": {
+                "origin": "https://teckstart.com",
+                "methods": [
+                  "OPTIONS",
+                  "GET"
+                ],
+                "headers": [
+                  "Content-Type",
+                  "X-Amz-Date",
+                  "Authorization",
+                  "X-Api-Key",
+                  "X-Amz-Security-Token",
+                  "X-Amz-User-Agent"
+                ],
+                "allowCredentials": false
+              },
+              "authorizer": {
+                "type": "COGNITO_USER_POOLS",
+                "managedExternally": false,
+                "authorizerId": {
+                  "Ref": "ApiGatewayAuthorizer"
+                },
+                "resultTtlInSeconds": 300,
+                "identitySource": "method.request.header.Authorization",
+                "claims": []
+              },
+              "integration": "AWS_PROXY"
+            }
+          }
+        ],
+        "name": "expense-tracker-prod-getUser",
+        "package": {},
+        "memory": 512,
+        "timeout": 30,
+        "runtime": "nodejs18.x",
+        "vpc": {},
+        "versionLogicalId": "GetUserLambdaVersionLNykF8RkGNA2A7ZIdrli5hxUmUmFUG6MJSowFY3k"
+      },
+      "createExpense": {
+        "handler": "expenses.createExpense",
+        "events": [
+          {
+            "http": {
+              "path": "expenses",
+              "method": "post",
+              "cors": {
+                "origin": "https://teckstart.com",
+                "methods": [
+                  "OPTIONS",
+                  "POST"
+                ],
+                "headers": [
+                  "Content-Type",
+                  "X-Amz-Date",
+                  "Authorization",
+                  "X-Api-Key",
+                  "X-Amz-Security-Token",
+                  "X-Amz-User-Agent"
+                ],
+                "allowCredentials": false
+              },
+              "authorizer": {
+                "type": "COGNITO_USER_POOLS",
+                "managedExternally": false,
+                "authorizerId": {
+                  "Ref": "ApiGatewayAuthorizer"
+                },
+                "resultTtlInSeconds": 300,
+                "identitySource": "method.request.header.Authorization",
+                "claims": []
+              },
+              "integration": "AWS_PROXY"
+            }
+          }
+        ],
+        "name": "expense-tracker-prod-createExpense",
+        "package": {},
+        "memory": 512,
+        "timeout": 30,
+        "runtime": "nodejs18.x",
+        "vpc": {},
+        "versionLogicalId": "CreateExpenseLambdaVersionQDBcPUJNyByFQGS9yfOH5O4fUQZFrfEEw2cKe9s0A4"
+      },
+      "getExpenses": {
+        "handler": "expenses.getExpenses",
+        "events": [
+          {
+            "http": {
+              "path": "expenses",
+              "method": "get",
+              "cors": {
+                "origin": "https://teckstart.com",
+                "methods": [
+                  "OPTIONS",
+                  "GET"
+                ],
+                "headers": [
+                  "Content-Type",
+                  "X-Amz-Date",
+                  "Authorization",
+                  "X-Api-Key",
+                  "X-Amz-Security-Token",
+                  "X-Amz-User-Agent"
+                ],
+                "allowCredentials": false
+              },
+              "authorizer": {
+                "type": "COGNITO_USER_POOLS",
+                "managedExternally": false,
+                "authorizerId": {
+                  "Ref": "ApiGatewayAuthorizer"
+                },
+                "resultTtlInSeconds": 300,
+                "identitySource": "method.request.header.Authorization",
+                "claims": []
+              },
+              "integration": "AWS_PROXY"
+            }
+          }
+        ],
+        "name": "expense-tracker-prod-getExpenses",
+        "package": {},
+        "memory": 512,
+        "timeout": 30,
+        "runtime": "nodejs18.x",
+        "vpc": {},
+        "versionLogicalId": "GetExpensesLambdaVersion7NDcWRA3qbkX9wwTQG7i2KfpjnTT1cXCid2irCwQ"
+      },
+      "getExpense": {
+        "handler": "expenses.getExpense",
+        "events": [
+          {
+            "http": {
+              "path": "expenses/{transactionId}",
+              "method": "get",
+              "cors": {
+                "origin": "https://teckstart.com",
+                "methods": [
+                  "OPTIONS",
+                  "GET"
+                ],
+                "headers": [
+                  "Content-Type",
+                  "X-Amz-Date",
+                  "Authorization",
+                  "X-Api-Key",
+                  "X-Amz-Security-Token",
+                  "X-Amz-User-Agent"
+                ],
+                "allowCredentials": false
+              },
+              "authorizer": {
+                "type": "COGNITO_USER_POOLS",
+                "managedExternally": false,
+                "authorizerId": {
+                  "Ref": "ApiGatewayAuthorizer"
+                },
+                "resultTtlInSeconds": 300,
+                "identitySource": "method.request.header.Authorization",
+                "claims": []
+              },
+              "integration": "AWS_PROXY"
+            }
+          }
+        ],
+        "name": "expense-tracker-prod-getExpense",
+        "package": {},
+        "memory": 512,
+        "timeout": 30,
+        "runtime": "nodejs18.x",
+        "vpc": {},
+        "versionLogicalId": "GetExpenseLambdaVersionmW5neWCK7Rr9TtB2Sd7fvPO0z0J1v7T7nVCRZgVw"
+      },
+      "updateExpense": {
+        "handler": "expenses.updateExpense",
+        "events": [
+          {
+            "http": {
+              "path": "expenses/{transactionId}",
+              "method": "put",
+              "cors": {
+                "origin": "https://teckstart.com",
+                "methods": [
+                  "OPTIONS",
+                  "PUT"
+                ],
+                "headers": [
+                  "Content-Type",
+                  "X-Amz-Date",
+                  "Authorization",
+                  "X-Api-Key",
+                  "X-Amz-Security-Token",
+                  "X-Amz-User-Agent"
+                ],
+                "allowCredentials": false
+              },
+              "authorizer": {
+                "type": "COGNITO_USER_POOLS",
+                "managedExternally": false,
+                "authorizerId": {
+                  "Ref": "ApiGatewayAuthorizer"
+                },
+                "resultTtlInSeconds": 300,
+                "identitySource": "method.request.header.Authorization",
+                "claims": []
+              },
+              "integration": "AWS_PROXY"
+            }
+          }
+        ],
+        "name": "expense-tracker-prod-updateExpense",
+        "package": {},
+        "memory": 512,
+        "timeout": 30,
+        "runtime": "nodejs18.x",
+        "vpc": {},
+        "versionLogicalId": "UpdateExpenseLambdaVersionFTs2mPYnJU0jWBMhsaIHVpbEjVgaeIwzbSPdlU"
+      },
+      "deleteExpense": {
+        "handler": "expenses.deleteExpense",
+        "events": [
+          {
+            "http": {
+              "path": "expenses/{transactionId}",
+              "method": "delete",
+              "cors": {
+                "origin": "https://teckstart.com",
+                "methods": [
+                  "OPTIONS",
+                  "DELETE"
+                ],
+                "headers": [
+                  "Content-Type",
+                  "X-Amz-Date",
+                  "Authorization",
+                  "X-Api-Key",
+                  "X-Amz-Security-Token",
+                  "X-Amz-User-Agent"
+                ],
+                "allowCredentials": false
+              },
+              "authorizer": {
+                "type": "COGNITO_USER_POOLS",
+                "managedExternally": false,
+                "authorizerId": {
+                  "Ref": "ApiGatewayAuthorizer"
+                },
+                "resultTtlInSeconds": 300,
+                "identitySource": "method.request.header.Authorization",
+                "claims": []
+              },
+              "integration": "AWS_PROXY"
+            }
+          }
+        ],
+        "name": "expense-tracker-prod-deleteExpense",
+        "package": {},
+        "memory": 512,
+        "timeout": 30,
+        "runtime": "nodejs18.x",
+        "vpc": {},
+        "versionLogicalId": "DeleteExpenseLambdaVersionaqtgAEAhyqOl1Dn34NXt2qQrHvjykqMt3MbDH8Mn8"
+      },
+      "getDashboard": {
+        "handler": "expenses.getDashboard",
+        "events": [
+          {
+            "http": {
+              "path": "dashboard/summary",
+              "method": "get",
+              "cors": {
+                "origin": "https://teckstart.com",
+                "methods": [
+                  "OPTIONS",
+                  "GET"
+                ],
+                "headers": [
+                  "Content-Type",
+                  "X-Amz-Date",
+                  "Authorization",
+                  "X-Api-Key",
+                  "X-Amz-Security-Token",
+                  "X-Amz-User-Agent"
+                ],
+                "allowCredentials": false
+              },
+              "authorizer": {
+                "type": "COGNITO_USER_POOLS",
+                "managedExternally": false,
+                "authorizerId": {
+                  "Ref": "ApiGatewayAuthorizer"
+                },
+                "resultTtlInSeconds": 300,
+                "identitySource": "method.request.header.Authorization",
+                "claims": []
+              },
+              "integration": "AWS_PROXY"
+            }
+          }
+        ],
+        "name": "expense-tracker-prod-getDashboard",
+        "package": {},
+        "memory": 512,
+        "timeout": 30,
+        "runtime": "nodejs18.x",
+        "vpc": {},
+        "versionLogicalId": "GetDashboardLambdaVersioncezSprJQQ34DGhZQsn1ILeDasatn6fbHCcBCO1Tg"
+      },
+      "getUploadUrl": {
+        "handler": "uploadUrl.getUploadUrl",
+        "events": [
+          {
+            "http": {
+              "path": "upload-url",
+              "method": "post",
+              "cors": {
+                "origin": "https://teckstart.com",
+                "methods": [
+                  "OPTIONS",
+                  "POST"
+                ],
+                "headers": [
+                  "Content-Type",
+                  "X-Amz-Date",
+                  "Authorization",
+                  "X-Api-Key",
+                  "X-Amz-Security-Token",
+                  "X-Amz-User-Agent"
+                ],
+                "allowCredentials": false
+              },
+              "authorizer": {
+                "type": "COGNITO_USER_POOLS",
+                "managedExternally": false,
+                "authorizerId": {
+                  "Ref": "ApiGatewayAuthorizer"
+                },
+                "resultTtlInSeconds": 300,
+                "identitySource": "method.request.header.Authorization",
+                "claims": []
+              },
+              "integration": "AWS_PROXY"
+            }
+          }
+        ],
+        "name": "expense-tracker-prod-getUploadUrl",
+        "package": {},
+        "memory": 512,
+        "timeout": 30,
+        "runtime": "nodejs18.x",
+        "vpc": {},
+        "versionLogicalId": "GetUploadUrlLambdaVersioncOk3LcUSCNjqFfmCFgET3Qo0hfF32GCYsQtueYKkW58"
+      },
+      "parseReceipt": {
+        "handler": "parseReceipt.parseReceipt",
+        "timeout": 29,
+        "events": [
+          {
+            "http": {
+              "path": "parse-receipt",
+              "method": "post",
+              "cors": {
+                "origin": "https://teckstart.com",
+                "methods": [
+                  "OPTIONS",
+                  "POST"
+                ],
+                "headers": [
+                  "Content-Type",
+                  "X-Amz-Date",
+                  "Authorization",
+                  "X-Api-Key",
+                  "X-Amz-Security-Token",
+                  "X-Amz-User-Agent"
+                ],
+                "allowCredentials": false
+              },
+              "authorizer": {
+                "type": "COGNITO_USER_POOLS",
+                "managedExternally": false,
+                "authorizerId": {
+                  "Ref": "ApiGatewayAuthorizer"
+                },
+                "resultTtlInSeconds": 300,
+                "identitySource": "method.request.header.Authorization",
+                "claims": []
+              },
+              "integration": "AWS_PROXY"
+            }
+          }
+        ],
+        "name": "expense-tracker-prod-parseReceipt",
+        "package": {},
+        "memory": 512,
+        "runtime": "nodejs18.x",
+        "vpc": {},
+        "versionLogicalId": "ParseReceiptLambdaVersion420J3Po9PiJDJL5jHRfXFNtBFSmyMQroGTHy7Yv9kw"
+      }
+    },
+    "resources": {
+      "Resources": {
+        "CognitoUserPool": {
+          "Type": "AWS::Cognito::UserPool",
+          "Properties": {
+            "UserPoolName": "expense-tracker-user-pool-prod",
+            "AutoVerifiedAttributes": [
+              "email"
+            ],
+            "UsernameAttributes": [
+              "email"
+            ],
+            "Schema": [
+              {
+                "Name": "email",
+                "Required": true,
+                "Mutable": false
+              }
+            ],
+            "Policies": {
+              "PasswordPolicy": {
+                "MinimumLength": 8,
+                "RequireUppercase": true,
+                "RequireLowercase": true,
+                "RequireNumbers": true,
+                "RequireSymbols": false
+              }
+            }
+          }
+        },
+        "CognitoUserPoolClient": {
+          "Type": "AWS::Cognito::UserPoolClient",
+          "Properties": {
+            "ClientName": "expense-tracker-client-prod",
+            "UserPoolId": {
+              "Ref": "CognitoUserPool"
+            },
+            "GenerateSecret": false,
+            "ExplicitAuthFlows": [
+              "ALLOW_USER_PASSWORD_AUTH",
+              "ALLOW_REFRESH_TOKEN_AUTH"
+            ],
+            "PreventUserExistenceErrors": "ENABLED",
+            "CallbackURLs": [
+              "https://teckstart.com/callback.html"
+            ],
+            "LogoutURLs": [
+              "https://teckstart.com"
+            ]
+          }
+        },
+        "ApiGatewayAuthorizer": {
+          "Type": "AWS::ApiGateway::Authorizer",
+          "Properties": {
+            "Name": "CognitoAuthorizer",
+            "Type": "COGNITO_USER_POOLS",
+            "IdentitySource": "method.request.header.Authorization",
+            "RestApiId": {
+              "Ref": "ApiGatewayRestApi"
+            },
+            "ProviderARNs": [
+              {
+                "Fn::GetAtt": [
+                  "CognitoUserPool",
+                  "Arn"
+                ]
+              }
+            ]
+          }
+        },
+        "TransactionsTable": {
+          "Type": "AWS::DynamoDB::Table",
+          "Properties": {
+            "TableName": "expense-tracker-transactions-prod",
+            "BillingMode": "PAY_PER_REQUEST",
+            "AttributeDefinitions": [
+              {
+                "AttributeName": "userId",
+                "AttributeType": "S"
+              },
+              {
+                "AttributeName": "transactionId",
+                "AttributeType": "S"
+              },
+              {
+                "AttributeName": "uploadDate",
+                "AttributeType": "S"
+              }
+            ],
+            "KeySchema": [
+              {
+                "AttributeName": "userId",
+                "KeyType": "HASH"
+              },
+              {
+                "AttributeName": "transactionId",
+                "KeyType": "RANGE"
+              }
+            ],
+            "GlobalSecondaryIndexes": [
+              {
+                "IndexName": "userId-uploadDate-index",
+                "KeySchema": [
+                  {
+                    "AttributeName": "userId",
+                    "KeyType": "HASH"
+                  },
+                  {
+                    "AttributeName": "uploadDate",
+                    "KeyType": "RANGE"
+                  }
+                ],
+                "Projection": {
+                  "ProjectionType": "ALL"
+                }
+              }
+            ],
+            "Tags": [
+              {
+                "Key": "Project",
+                "Value": "ExpenseTracker"
+              },
+              {
+                "Key": "Environment",
+                "Value": "prod"
+              }
+            ]
+          }
+        },
+        "ReceiptsBucket": {
+          "Type": "AWS::S3::Bucket",
+          "Properties": {
+            "BucketName": "expense-tracker-receipts-prod-391907191624",
+            "CorsConfiguration": {
+              "CorsRules": [
+                {
+                  "AllowedOrigins": [
+                    "https://teckstart.com"
+                  ],
+                  "AllowedMethods": [
+                    "GET",
+                    "PUT",
+                    "POST",
+                    "DELETE"
+                  ],
+                  "AllowedHeaders": [
+                    "*"
+                  ],
+                  "MaxAge": 3000
+                }
+              ]
+            },
+            "PublicAccessBlockConfiguration": {
+              "BlockPublicAcls": true,
+              "BlockPublicPolicy": true,
+              "IgnorePublicAcls": true,
+              "RestrictPublicBuckets": true
+            },
+            "LifecycleConfiguration": {
+              "Rules": [
+                {
+                  "Id": "ArchiveOldReceipts",
+                  "Status": "Enabled",
+                  "Transitions": [
+                    {
+                      "TransitionInDays": 90,
+                      "StorageClass": "GLACIER"
+                    }
+                  ]
+                }
+              ]
+            },
+            "Tags": [
+              {
+                "Key": "Project",
+                "Value": "ExpenseTracker"
+              },
+              {
+                "Key": "Environment",
+                "Value": "prod"
+              }
+            ]
+          }
+        },
+        "ReceiptsBucketPolicy": {
+          "Type": "AWS::S3::BucketPolicy",
+          "Properties": {
+            "Bucket": {
+              "Ref": "ReceiptsBucket"
+            },
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Principal": {
+                    "Service": "lambda.amazonaws.com"
+                  },
+                  "Action": [
+                    "s3:PutObject",
+                    "s3:GetObject",
+                    "s3:DeleteObject"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "${ReceiptsBucket.Arn}/*"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "Outputs": {
+        "ApiEndpoint": {
+          "Description": "API Gateway endpoint URL",
+          "Value": {
+            "Fn::Sub": "https://${ApiGatewayRestApi}.execute-api.us-east-1.amazonaws.com/prod"
+          }
+        },
+        "UserPoolId": {
+          "Description": "Cognito User Pool ID",
+          "Value": {
+            "Ref": "CognitoUserPool"
+          }
+        },
+        "UserPoolClientId": {
+          "Description": "Cognito User Pool Client ID",
+          "Value": {
+            "Ref": "CognitoUserPoolClient"
+          }
+        },
+        "TransactionsTableName": {
+          "Description": "DynamoDB Transactions Table Name",
+          "Value": {
+            "Ref": "TransactionsTable"
+          }
+        },
+        "ReceiptsBucketName": {
+          "Description": "S3 Receipts Bucket Name",
+          "Value": {
+            "Ref": "ReceiptsBucket"
+          }
+        }
+      }
+    },
+    "configValidationMode": "warn",
+    "serviceFilename": "serverless.yml",
+    "initialServerlessConfig": {
+      "service": "expense-tracker",
+      "provider": {
+        "$ref": "$[\"service\"][\"provider\"]"
+      },
+      "functions": {
+        "$ref": "$[\"service\"][\"functions\"]"
+      },
+      "resources": {
+        "$ref": "$[\"service\"][\"resources\"]"
+      }
+    },
+    "layers": {},
+    "isDashboardMonitoringPreconfigured": false,
+    "artifact": "/workspace/expense-tracker/lambda/expense-tracker-prod-login/.serverless/expense-tracker.zip"
+  },
+  "package": {
+    "artifactDirectoryName": "serverless/expense-tracker/prod/1764093159361-2025-11-25T17:52:39.361Z",
+    "artifact": "expense-tracker.zip"
+  }
+}

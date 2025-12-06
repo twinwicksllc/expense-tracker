@@ -253,8 +253,9 @@
            if (!select) return;
            select.innerHTML = '<option value="">None</option>';
            projects.forEach(p => {
+               if (!p || !p.transactionId || !p.name) return;
                const opt = document.createElement('option');
-               opt.value = p.transactionId; // using transactionId as projectId
+               opt.value = p.transactionId;
                opt.innerText = p.name;
                select.appendChild(opt);
            });
@@ -314,14 +315,22 @@
                mode: 'cors',
                headers: { 'Authorization': `Bearer ${getToken()}` }
            });
+           if (!res.ok) {
+               throw new Error(`Failed to check credentials: ${res.status}`);
+           }
            const settings = await res.json();
            
-           if (settings.configured) {
-               document.getElementById('aws-import-section').style.display = 'block';
-               document.getElementById('aws-credentials-needed').style.display = 'none';
+           const importSection = document.getElementById('aws-import-section');
+           const credentialsNeeded = document.getElementById('aws-credentials-needed');
+           
+           if (!importSection || !credentialsNeeded) return;
+           
+           if (settings && settings.configured) {
+               importSection.style.display = 'block';
+               credentialsNeeded.style.display = 'none';
            } else {
-               document.getElementById('aws-import-section').style.display = 'none';
-               document.getElementById('aws-credentials-needed').style.display = 'block';
+               importSection.style.display = 'none';
+               credentialsNeeded.style.display = 'block';
            }
        } catch (e) {
            Logger.error('Failed to check AWS credentials', {
@@ -329,15 +338,20 @@
                stack: e.stack,
                action: 'checkAwsCredentials'
            });
-           document.getElementById('aws-import-section').style.display = 'none';
-           document.getElementById('aws-credentials-needed').style.display = 'block';
+           const importSection = document.getElementById('aws-import-section');
+           const credentialsNeeded = document.getElementById('aws-credentials-needed');
+           if (importSection) importSection.style.display = 'none';
+           if (credentialsNeeded) credentialsNeeded.style.display = 'block';
        }
    }
 
    async function importAwsExpenses() {
-       const period = document.getElementById('aws-import-period').value;
+       const periodEl = document.getElementById('aws-import-period');
        const statusDiv = document.getElementById('aws-import-status');
        
+       if (!periodEl || !statusDiv) return;
+       
+       const period = periodEl?.value || '1';
        statusDiv.className = 'loading';
        statusDiv.innerHTML = `Importing AWS expenses for the last ${period} month(s)... This may take a few minutes.`;
        
@@ -351,7 +365,7 @@
                    'Content-Type': 'application/json',
                    'X-Requested-With': 'XMLHttpRequest'
                },
-               body: JSON.stringify({ months: parseInt(period) })
+               body: JSON.stringify({ months: parseInt(period) || 1 })
            });
            
            const result = await res.json().catch(() => ({}));
@@ -379,7 +393,9 @@
                endpoint: `${CONFIG.API_BASE_URL}/aws-cost-import`,
                action: 'importAwsExpenses'
            });
-           statusDiv.className = 'error';
-           statusDiv.innerHTML = `Error importing AWS expenses: ${e.message}`;
+           if (statusDiv) {
+               statusDiv.className = 'error';
+               statusDiv.innerHTML = `Error importing AWS expenses: ${e.message}`;
+           }
        }
    }

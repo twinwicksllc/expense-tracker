@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeckStart Expense Tracker</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="apple-touch-icon.png">
+    <link rel="manifest" href="site.webmanifest">
+    <link rel="stylesheet" href="styles-1764381275.css">
+    <link rel="stylesheet" href="toast-styles-1764381275.css">
+    <script src="chart.min.js"></script>
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline' https://sites.super.myninja.ai; style-src 'self' 'unsafe-inline' https://expense-tracker-prod-v2.auth.us-east-1.amazoncognito.com; connect-src 'self' https://fcnq8h7mai.execute-api.us-east-1.amazonaws.com https://expense-tracker-prod-v2.auth.us-east-1.amazoncognito.com https://cognito-idp.us-east-1.amazonaws.com; img-src 'self' data: https:; font-src 'self' https://r2cdn.perplexity.ai;">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="logo">
+            <img src="logo-4.jpg" alt="TeckStart Logo" class="header-logo">
+        </div>
+        <div id="auth-section"></div>
+    </nav>
+
+    <div class="main-container" id="app-container" style="display:none;">
+        <div class="sidebar">
+            <button onclick="showTab('dashboard')">📊 Dashboard</button>
+            <button onclick="showTab('expenses')">💸 Expenses Entry</button>
+            <button onclick="showTab('projects')">📁 Project Entry</button>
+            <button onclick="showTab('settings')">⚙️ Settings</button>
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()">
+                    ⚡ Logout
+                </button>
+            </div>
+        </div>
+
+        <div class="content">
+            <div id="dashboard" class="tab-content active">
+                <h2>Dashboard</h2>
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <h3>YTD Expenses</h3>
+                        <p id="ytd-expenses">$0</p>
+                    </div>
+                    <div class="card">
+                        <h3>YTD Profit</h3>
+                        <p id="ytd-profit">$0</p>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-controls">
+                        <div class="control-group">
+                            <label>Time Period:</label>
+                            <button id="ytd-btn" class="active" onclick="setTimePeriod('ytd')">Year to Date</button>
+                            <button id="month-btn" onclick="setTimePeriod('month')">Month over Month</button>
+                        </div>
+                        <div class="control-group">
+                            <label>Group By:</label>
+                            <select id="chart-filter" onchange="updateChart()">
+                                <option value="vendor">Vendor</option>
+                                <option value="category">Category</option>
+                                <option value="project">Project</option>
+                            </select>
+                        </div>
+                    </div>
+                    <canvas id="spendingChart"></canvas>
+                </div>
+            </div>
+
+            <div id="expenses" class="tab-content">
+                <h2>Expense Entry</h2>
+                <div class="card">
+                    <div class="form-group">
+                        <label>Upload Receipt (AI Parse):</label>
+                        <input type="file" id="receipt-upload" accept="image/*,.pdf">
+                        <button type="button" id="btn-parse" onclick="handleFileUpload()">Upload & Parse</button>
+                    </div>
+                    <div class="form-group">
+                        <label>Vendor:</label>
+                        <input type="text" id="exp-vendor" placeholder="Enter vendor name">
+                    </div>
+                    <div class="form-group">
+                        <label>Description:</label>
+                        <input type="text" id="exp-desc" placeholder="Enter description">
+                    </div>
+                    <div class="form-group">
+                        <label>Amount:</label>
+                        <input type="number" id="exp-amount" placeholder="0.00" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Category:</label>
+                        <select id="exp-category">
+                            <option value="">Select category</option>
+                            <option value="food">Food</option>
+                            <option value="transport">Transport</option>
+                            <option value="entertainment">Entertainment</option>
+                            <option value="utilities">Utilities</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Date:</label>
+                        <input type="date" id="exp-date">
+                    </div>
+                    <div class="form-group">
+                        <label>Project:</label>
+                        <select id="exp-project-select">
+                            <option value="">None</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="exp-tax"> Tax Deductible
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>Receipt URL:</label>
+                        <input type="url" id="exp-url" placeholder="Receipt URL (optional)">
+                    </div>
+                    <button onclick="saveExpense(event)">Add Expense</button>
+                    <div id="expense-list"></div>
+                </div>
+            </div>
+
+            <div id="projects" class="tab-content">
+                <h2>Project Entry</h2>
+                <div class="card">
+                    <div class="form-group">
+                        <label>Project Name:</label>
+                        <input type="text" id="proj-name" placeholder="Enter project name">
+                    </div>
+                    <div class="form-group">
+                        <label>Category:</label>
+                        <select id="proj-category">
+                            <option value="">Select category</option>
+                            <option value="development">Development</option>
+                            <option value="consulting">Consulting</option>
+                            <option value="design">Design</option>
+                            <option value="marketing">Marketing</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Start Date:</label>
+                        <input type="date" id="proj-start">
+                    </div>
+                    <div class="form-group">
+                        <label>End Date:</label>
+                        <input type="date" id="proj-end">
+                    </div>
+                    <div class="form-group">
+                        <label>Description:</label>
+                        <textarea id="proj-desc" placeholder="Project description" rows="3"></textarea>
+                    </div>
+                    <button onclick="saveProject(event)">Add Project</button>
+                    <div id="project-list"></div>
+                </div>
+            </div>
+
+            <div id="settings" class="tab-content">
+                <h2>Settings</h2>
+                <div class="card">
+                    <h3>AWS Cost Integration</h3>
+                    <p>Enter IAM User credentials with `ce:GetCostAndUsage` permissions.</p>
+                    <form>
+                        <input type="text" id="aws-access-key" placeholder="Access Key ID" autocomplete="username">
+                        <input type="password" id="aws-secret-key" placeholder="Secret Access Key" autocomplete="current-password">
+                    </form>
+                    <button onclick="saveAwsSettings()">Save Credentials</button>
+                    <div id="aws-credentials-needed" style="display:block; color: orange; margin-top: 10px;">
+                        ⚠️ AWS credentials needed for import functionality
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>AWS Expense Import</h3>
+                    <p>Import your AWS expenses for analysis.</p>
+                    <div id="aws-import-section" style="display:none;">
+                        <select id="aws-import-period">
+                            <option value="1">Last 1 month</option>
+                            <option value="3">Last 3 months</option>
+                            <option value="6">Last 6 months</option>
+                            <option value="12">Last 12 months</option>
+                        </select>
+                        <button onclick="importAwsExpenses()">Import Expenses</button>
+                        <div id="aws-import-status" style="margin-top: 10px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="login-view" class="hero-container">
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1 class="hero-title">TeckStart Expense Tracker</h1>
+                <h2 class="hero-subtitle">Smart Financial Tracking for Freelancers</h2>
+                <p class="hero-description">Track expenses, revenue, and projects with AI-powered receipt parsing. Built specifically for independent professionals who need powerful insights without the complexity.</p>
+                
+                <div class="feature-highlights">
+                    <div class="feature">
+                        <div class="feature-icon">🤖</div>
+                        <span>AI Receipt Parsing</span>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">📊</div>
+                        <span>Project Tracking</span>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">💰</div>
+                        <span>Revenue Analytics</span>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">☁️</div>
+                        <span>AWS Integration</span>
+                    </div>
+                </div>
+                
+                <button id="login-btn" class="cta-button" onclick="login()">
+                    <span class="cta-icon">🚀</span>
+                    Start Tracking with Google
+                </button>
+                
+                <div class="trust-indicators">
+                    <div class="trust-item">
+                        <span class="trust-icon">🔒</span>
+                        <span>Secure & Encrypted</span>
+                    </div>
+                    <div class="trust-item">
+                        <span class="trust-icon">⚡</span>
+                        <span>Lightning Fast</span>
+                    </div>
+                    <div class="trust-item">
+                        <span class="trust-icon">📱</span>
+                        <span>Mobile Friendly</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="config-1764381275.js"></script>
+    <script src="toast-1764381275.js"></script>
+    <script src="logger-1764381275.js"></script>
+    <script src="oauth-1764381275.js"></script>
+    <script src="app-1764381275.js"></script>
+    <script src="dashboard-1764381275.js"></script>
+</body>
+
+</html>

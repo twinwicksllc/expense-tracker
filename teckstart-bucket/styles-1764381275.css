@@ -1,0 +1,194 @@
+body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f4f6f8; display: flex; flex-direction: column; height: 100vh; }
+   .navbar { background: white; color: #2c3e50; padding: 1rem; display: flex; justify-content: center; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+   .logo { display: flex; align-items: center; justify-content: center; }
+   .header-logo { width: 240px; height: 180px; border-radius: 18px; background: transparent; }
+   .main-container { display: flex; flex: 1; }
+   .sidebar { width: 250px; background: #fff; padding: 20px; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
+   .sidebar button { display: block; width: 100%; padding: 10px; margin-bottom: 10px; background: none; border: none; text-align: left; cursor: pointer; border-radius: 5px; }
+   .sidebar button:hover, .sidebar button.active { background: #e9ecef; color: #007bff; font-weight: bold; }
+   .sidebar-footer { margin-top: auto; padding-top: 20px; border-top: 1px solid #eee; }
+   .logout-btn { background: #dc3545 !important; color: white !important; font-weight: bold !important; }
+   .logout-btn:hover { background: #c82333 !important; color: white !important; }
+   .content { flex: 1; padding: 30px; overflow-y: auto; }
+   .tab-content { display: none; }
+   .tab-content.active { display: block; }
+   .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+   .stats-row { display: flex; gap: 20px; margin-bottom: 20px; }
+   .form-group { margin-bottom: 15px; }
+   .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+   .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+   button[type="submit"], #btn-parse { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
+   .upload-section { background: #eef2f5; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 2px dashed #ccc; text-align: center; }
+   #aws-import-status { margin-top: 10px; padding: 10px; border-radius: 4px; }
+   #aws-import-status.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+   #aws-import-status.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+   #aws-import-status.loading { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+   .chart-controls { display: flex; justify-content: space-between; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px; }
+   .control-group { display: flex; align-items: center; gap: 10px; }
+   .control-group label { margin: 0; font-weight: 500; }
+   .control-group button { padding: 5px 15px; border: 1px solid #ccc; background: white; cursor: pointer; border-radius: 4px; }
+   .control-group button.active { background: #007bff; color: white; border-color: #007bff; }
+   .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; }
+   .chart-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+   #spendingChart { max-height: 400px; }
+   
+   /* Exciting Homepage Styles */
+   .hero-container {
+       min-height: 100vh;
+       background: linear-gradient(135deg, #1e3a8a 0%, #059669 50%, #1e40af 100%);
+       display: flex;
+       align-items: center;
+       justify-content: center;
+       position: relative;
+       overflow: hidden;
+   }
+   
+   .hero-content {
+       display: flex;
+       align-items: center;
+       justify-content: center;
+       max-width: 1600px;
+       padding: 40px;
+       z-index: 2;
+   }
+   
+
+   
+   .hero-text {
+       color: white;
+       max-width: 800px;
+       text-align: center;
+   }
+   
+   .hero-title {
+       font-size: 4rem;
+       font-weight: 800;
+       margin: 0 0 10px 0;
+       background: linear-gradient(45deg, #fff, #f0f8ff);
+       -webkit-background-clip: text;
+       -webkit-text-fill-color: transparent;
+       text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+   }
+   
+   .hero-subtitle {
+       font-size: 1.8rem;
+       font-weight: 300;
+       margin: 0 0 20px 0;
+       opacity: 0.95;
+   }
+   
+   .hero-description {
+       font-size: 1.2rem;
+       line-height: 1.6;
+       margin-bottom: 30px;
+       opacity: 0.9;
+   }
+   
+   .feature-highlights {
+       display: grid;
+       grid-template-columns: repeat(2, 1fr);
+       gap: 15px;
+       margin-bottom: 40px;
+   }
+   
+   .feature {
+       display: flex;
+       align-items: center;
+       gap: 10px;
+       background: rgba(255,255,255,0.1);
+       padding: 15px;
+       border-radius: 12px;
+       backdrop-filter: blur(10px);
+       border: 1px solid rgba(255,255,255,0.2);
+       transition: transform 0.2s ease;
+   }
+   
+   .feature:hover {
+       transform: translateY(-2px);
+       background: rgba(255,255,255,0.15);
+   }
+   
+   .feature-icon {
+       font-size: 1.5rem;
+   }
+   
+   .cta-button {
+       background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+       color: white;
+       border: none;
+       padding: 18px 40px;
+       font-size: 1.3rem;
+       font-weight: 600;
+       border-radius: 50px;
+       cursor: pointer;
+       display: flex;
+       align-items: center;
+       justify-content: center;
+       gap: 12px;
+       transition: all 0.3s ease;
+       box-shadow: 0 10px 30px rgba(255,107,107,0.4);
+       margin: 0 auto 30px auto;
+   }
+   
+   .cta-button:hover {
+       transform: translateY(-3px);
+       box-shadow: 0 15px 40px rgba(255,107,107,0.6);
+       background: linear-gradient(45deg, #ff5252, #d63031);
+   }
+   
+   .cta-icon {
+       font-size: 1.2rem;
+   }
+   
+   .trust-indicators {
+       display: flex;
+       justify-content: center;
+       gap: 30px;
+       opacity: 0.8;
+   }
+   
+   .trust-item {
+       display: flex;
+       align-items: center;
+       gap: 8px;
+       font-size: 0.9rem;
+   }
+   
+   .trust-icon {
+       font-size: 1.1rem;
+   }
+   
+
+   
+   @media (max-width: 768px) {
+       .hero-content {
+           text-align: center;
+           padding: 20px;
+       }
+       
+       .hero-title {
+           font-size: 2.5rem;
+       }
+       
+       .hero-subtitle {
+           font-size: 1.3rem;
+       }
+       
+       .header-logo {
+           width: 192px;
+           height: 144px;
+       }
+       
+       .logo {
+           font-size: 1.2rem;
+       }
+       
+       .feature-highlights {
+           grid-template-columns: 1fr;
+       }
+       
+       .trust-indicators {
+           flex-direction: column;
+           gap: 15px;
+       }
+   }

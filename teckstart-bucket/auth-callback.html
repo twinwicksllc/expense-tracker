@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authenticating...</title>
+    <script src="config-1764381275.js"></script>
+    <script>
+        window.onload = async function () {
+            console.log('Auth callback loaded');
+
+            // Check URL hash first (Implicit Grant)
+            const hash = window.location.hash.substring(1);
+            const hashParams = new URLSearchParams(hash);
+            const idTokenFromHash = hashParams.get('id_token');
+
+            if (idTokenFromHash) {
+                console.log('Found id_token in hash');
+                localStorage.setItem('id_token', idTokenFromHash);
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // Check URL query params (Authorization Code Grant)
+            const query = window.location.search.substring(1);
+            const queryParams = new URLSearchParams(query);
+            const code = queryParams.get('code');
+
+            console.log('Authorization code:', code);
+
+            if (code) {
+                document.body.innerHTML = '<h2>Authenticating...</h2><p>Exchanging authorization code for tokens...</p>';
+
+                try {
+                    const tokenEndpoint = `${CONFIG.COGNITO.DOMAIN}/oauth2/token`;
+                    console.log('Token endpoint:', tokenEndpoint);
+
+                    const response = await fetch(tokenEndpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: new URLSearchParams({
+                            grant_type: 'authorization_code',
+                            client_id: CONFIG.COGNITO.CLIENT_ID,
+                            code: code,
+                            redirect_uri: 'https://teckstart.com/auth-callback.html'
+                        })
+                    });
+
+                    console.log('Token response status:', response.status);
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('Token exchange error:', errorText);
+                        throw new Error(`Token exchange failed: ${response.status} - ${errorText}`);
+                    }
+
+                    const tokens = await response.json();
+                    console.log('Tokens received');
+
+                    localStorage.setItem('id_token', tokens.id_token);
+                    if (tokens.access_token) localStorage.setItem('access_token', tokens.access_token);
+                    if (tokens.refresh_token) localStorage.setItem('refresh_token', tokens.refresh_token);
+
+                    window.location.href = 'index.html';
+                } catch (e) {
+                    console.error('Token exchange error:', e);
+                    document.body.innerHTML = `<h2>Authentication Failed</h2><p>Error: ${e.message}</p><p>Check browser console for details.</p><a href="index.html">Return to Home</a>`;
+                }
+                return;
+            }
+
+            console.error('No id_token or code found in URL');
+            document.body.innerHTML = '<h2>Authentication Failed</h2><p>No token or authorization code received.</p><a href="index.html">Return to Home</a>';
+        };
+    </script>
+</head>
+
+<body>
+    <h2>Authenticating...</h2>
+    <p>Please wait while we log you in.</p>
+</body>
+
+</html>

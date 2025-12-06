@@ -18,7 +18,7 @@ function login() {
 function logout() {
     try {
         localStorage.clear();
-        if (!CONFIG.COGNITO.SIGN_OUT_URI) {
+        if (!CONFIG || !CONFIG.COGNITO || !CONFIG.COGNITO.SIGN_OUT_URI) {
             throw new Error('Sign out URI not configured');
         }
         window.location.href = CONFIG.COGNITO.SIGN_OUT_URI;
@@ -74,7 +74,7 @@ function checkAuth() {
                 throw new Error('Invalid JWT payload: not an object');
             }
             
-            if (payload.exp && payload.exp * 1000 < Date.now()) {
+            if (payload.exp && typeof payload.exp === 'number' && payload.exp * 1000 < Date.now()) {
                 console.log('Token expired');
                 localStorage.clear();
                 loginView.style.display = 'block';

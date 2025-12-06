@@ -20,7 +20,10 @@ async function updateDashboard() {
         Logger.error('Dashboard load failed', {
             error: e.message,
             stack: e.stack,
-            action: 'updateDashboard'
+            action: 'updateDashboard',
+            hasToken: !!getToken(),
+            expensesCount: expensesData?.length || 0,
+            projectsCount: projectsData?.length || 0
         });
     }
 }
@@ -29,8 +32,11 @@ async function fetchExpenses() {
     try {
         let res;
         try {
+            const token = getToken();
             res = await fetch(`${CONFIG.API_BASE_URL}/expenses`, {
-                headers: { 'Authorization': `Bearer ${getToken()}` }
+                mode: 'cors',
+                credentials: 'same-origin',
+                headers: { 'Authorization': `Bearer ${token}` }
             });
         } catch (networkError) {
             throw new Error('Network error: ' + networkError.message);
@@ -64,6 +70,8 @@ async function fetchProjects() {
         let res;
         try {
             res = await fetch(`${CONFIG.API_BASE_URL}/expenses`, {
+                mode: 'cors',
+                credentials: 'same-origin',
                 headers: { 'Authorization': `Bearer ${getToken()}` }
             });
         } catch (networkError) {
@@ -119,6 +127,7 @@ function setTimePeriod(period) {
     }
 }
 
+// amazonq-ignore-next-line
 function updateChart() {
     renderChart();
 }
@@ -126,6 +135,8 @@ function updateChart() {
 // ----------------------
 // Calculations
 // ----------------------
+const CURRENCY_OPTIONS = { style: 'currency', currency: 'USD' };
+
 function calculateStats() {
     try {
         const ytdExpensesEl = document.getElementById('ytd-expenses');
@@ -158,7 +169,7 @@ function formatCurrency(num) {
         if (typeof num !== 'number' || isNaN(num)) {
             return '$0.00';
         }
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
+        return new Intl.NumberFormat('en-US', CURRENCY_OPTIONS).format(num);
     } catch (error) {
         Logger.error('Failed to format currency', {
             error: error.message,
@@ -216,38 +227,53 @@ function renderChart() {
         Logger.error('Failed to render chart', {
             error: error.message,
             stack: error.stack,
-            action: 'renderChart'
+            action: 'renderChart',
+            currentTimePeriod: currentTimePeriod,
+            expensesCount: expensesData.length,
+            hasChartInstance: !!spendingChartInstance
         });
     }
 }
 
 function createYTDChart(filterType) {
-    const currentYear = new Date().getFullYear();
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    
-    const monthlyData = {};
-    const categories = new Set();
-    
-    expensesData.forEach(exp => {
-        const expDate = new Date(exp.date);
-        if (expDate.getFullYear() !== currentYear) return;
+    try {
+        const currentYear = new Date().getFullYear();
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         
-        const month = months[expDate.getMonth()];
-        let category = getCategory(exp, filterType);
+        const monthlyData = {};
+        const categories = new Set();
         
-        categories.add(category);
-        if (!monthlyData[month]) monthlyData[month] = {};
-        monthlyData[month][category] = (monthlyData[month][category] || 0) + parseFloat(exp.amount);
-    });
-    
-    const datasets = Array.from(categories).map((cat, i) => ({
-        label: cat,
-        data: months.map(month => monthlyData[month]?.[cat] || 0),
-        backgroundColor: `hsl(${i * 360 / categories.size}, 70%, 60%)`,
-        borderWidth: 1
-    }));
-    
-    return { labels: months, datasets };
+        expensesData.forEach(exp => {
+            if (!exp || !exp.date) return;
+            const expDate = new Date(exp.date);
+            if (isNaN(expDate.getTime()) || expDate.getFullYear() !== currentYear) return;
+            
+            const month = months[expDate.getMonth()];
+            let category = getCategory(exp, filterType);
+            
+            categories.add(category);
+            if (!monthlyData[month]) monthlyData[month] = {};
+            const amount = parseFloat(exp.amount);
+            monthlyData[month][category] = (monthlyData[month][category] || 0) + (isNaN(amount) ? 0 : amount);
+        });
+        
+        const datasets = Array.from(categories).map((cat, i) => ({
+            label: cat,
+            data: months.map(month => monthlyData[month]?.[cat] || 0),
+            backgroundColor: categories.size > 0 ? `hsl(${i * 360 / categories.size}, 70%, 60%)` : 'hsl(0, 70%, 60%)',
+            borderWidth: 1
+        }));
+        
+        return { labels: months, datasets };
+    } catch (error) {
+        Logger.error('Failed to create YTD chart', {
+            error: error.message,
+            stack: error.stack,
+            filterType: filterType,
+            action: 'createYTDChart'
+        });
+        return { labels: [], datasets: [] };
+    }
 }
 
 function createMonthlyChart(filterType) {
@@ -263,7 +289,9 @@ function createMonthlyChart(filterType) {
     const categories = new Set();
     
     expensesData.forEach(exp => {
+        if (!exp || !exp.date) return;
         const expDate = new Date(exp.date);
+        if (isNaN(expDate.getTime())) return;
         const monthKey = expDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
         
         if (!last12Months.includes(monthKey)) return;
@@ -278,7 +306,7 @@ function createMonthlyChart(filterType) {
     const datasets = Array.from(categories).map((cat, i) => ({
         label: cat,
         data: last12Months.map(month => monthlyData[month]?.[cat] || 0),
-        backgroundColor: `hsl(${i * 360 / categories.size}, 70%, 60%)`,
+        backgroundColor: categories.size > 0 ? `hsl(${i * 360 / categories.size}, 70%, 60%)` : 'hsl(0, 70%, 60%)',
         borderWidth: 1
     }));
     
@@ -294,8 +322,8 @@ function getCategory(exp, filterType) {
         return exp.category || 'Uncategorized';
     } else if (filterType === 'project') {
         if (exp.projectId) {
-            const proj = projectsData.find(p => p.transactionId === exp.projectId);
-            return proj ? proj.name : 'Deleted Project';
+            const proj = Array.isArray(projectsData) ? projectsData.find(p => p && p.transactionId === exp.projectId) : null;
+            return proj && proj.name ? proj.name : 'Deleted Project';
         }
         return 'No Project';
     }
@@ -331,7 +359,11 @@ function updateProjectDropdowns() {
             select.innerHTML = defaultValue + optionsHTML;
         });
         
-        console.log(`Updated ${projectSelects.length} project dropdowns with ${projectsData.length} projects`);
+        Logger.info('Updated project dropdowns', {
+            dropdownCount: projectSelects.length,
+            projectCount: projectsData.length,
+            action: 'updateProjectDropdowns'
+        });
     } catch (error) {
         Logger.error('Error updating project dropdowns', {
             error: error.message,

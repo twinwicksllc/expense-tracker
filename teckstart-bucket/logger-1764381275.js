@@ -34,7 +34,7 @@ const Logger = {
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 5000);
             
-            await fetch(`${CONFIG.API_BASE_URL}/logs`, {
+            const response = await fetch(`${CONFIG.API_BASE_URL}/logs`, {
                 method: 'POST',
                 mode: 'cors',
                 credentials: 'same-origin',
@@ -48,6 +48,11 @@ const Logger = {
             });
             
             clearTimeout(timeout);
+            
+            if (!response.ok) {
+                const responseBody = await response.text().catch(() => 'Unable to read response');
+                console.warn(`Logger: Server returned ${response.status} ${response.statusText}`, { body: responseBody });
+            }
         } catch (e) {
             if (e.name === 'AbortError') {
                 console.warn('Logger: Request timeout');

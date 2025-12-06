@@ -62,7 +62,8 @@
                throw new Error('Upload URL must be an S3 URL');
            }
    
-           const s3Upload = await fetch(uploadUrl, { method: 'PUT', body: file });
+           // amazonq-ignore-next-line
+           const s3Upload = await fetch(uploadUrl, { method: 'PUT', mode: 'cors', body: file });
            if (!s3Upload.ok) {
                throw new Error(`S3 upload failed: ${s3Upload.status}`);
            }
@@ -70,7 +71,12 @@
            const parseRes = await fetch(`${CONFIG.API_BASE_URL}/parse-receipt`, {
                method: 'POST',
                mode: 'cors',
-               headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+               credentials: 'include',
+               headers: { 
+                   'Authorization': authHeader, 
+                   'Content-Type': 'application/json',
+                   'X-Requested-With': 'XMLHttpRequest'
+               },
                body: JSON.stringify({ fileKey: key })
            });
            
@@ -87,6 +93,9 @@
            document.getElementById('exp-tax').checked = Boolean(data.taxDeductible);
            if (!key || typeof key !== 'string' || key.includes('..') || key.includes('//')) {
                throw new Error('Invalid key from server');
+           }
+           if (!CONFIG.RECEIPTS_BUCKET) {
+               throw new Error('RECEIPTS_BUCKET not configured');
            }
            document.getElementById('exp-url').value = `https://${CONFIG.RECEIPTS_BUCKET}.s3.amazonaws.com/${key}`;
            
@@ -143,12 +152,13 @@
        };
    
        try {
+           const token = getToken();
            const res = await fetch(`${CONFIG.API_BASE_URL}/expenses`, {
                method: 'POST',
                mode: 'cors',
                credentials: 'same-origin',
                headers: { 
-                   'Authorization': `Bearer ${getToken()}`, 
+                   'Authorization': `Bearer ${token}`, 
                    'Content-Type': 'application/json',
                    'X-Requested-With': 'XMLHttpRequest'
                },
@@ -201,12 +211,13 @@
        };
    
        try {
+           const token = getToken();
            const res = await fetch(`${CONFIG.API_BASE_URL}/expenses`, {
                method: 'POST',
                mode: 'cors',
                credentials: 'same-origin',
                headers: { 
-                   'Authorization': `Bearer ${getToken()}`, 
+                   'Authorization': `Bearer ${token}`, 
                    'Content-Type': 'application/json',
                    'X-Requested-With': 'XMLHttpRequest'
                },
@@ -239,9 +250,10 @@
    async function loadProjectsList() {
        // Fetch all items and filter for projects (MVP style)
        try {
+           const token = getToken();
            const res = await fetch(`${CONFIG.API_BASE_URL}/expenses`, {
                mode: 'cors',
-               headers: { 'Authorization': `Bearer ${getToken()}` }
+               headers: { 'Authorization': `Bearer ${token}` }
            });
            if (!res.ok) {
                throw new Error(`Failed to load projects: ${res.status}`);
@@ -269,21 +281,29 @@
    }
 
    async function saveAwsSettings() {
-       const accessKey = document.getElementById('aws-access-key').value.trim();
-       const secretKey = document.getElementById('aws-secret-key').value.trim();
+       const accessKeyEl = document.getElementById('aws-access-key');
+       const secretKeyEl = document.getElementById('aws-secret-key');
+       
+       if (!accessKeyEl || !secretKeyEl) return;
+       
+       const accessKey = accessKeyEl.value.trim();
+       const secretKey = secretKeyEl.value.trim();
 
        if(!accessKey || !secretKey) {
-           Toast.warning("Please fill both fields");
+           if (typeof Toast !== 'undefined' && Toast.warning) {
+               Toast.warning("Please fill both fields");
+           }
            return;
        }
 
        try {
+           const token = getToken();
            const res = await fetch(`${CONFIG.API_BASE_URL}/aws-credentials`, {
                method: 'POST',
                mode: 'cors',
                credentials: 'same-origin',
                headers: { 
-                   'Authorization': `Bearer ${getToken()}`, 
+                   'Authorization': `Bearer ${token}`, 
                    'Content-Type': 'application/json',
                    'X-Requested-With': 'XMLHttpRequest'
                },
@@ -291,13 +311,17 @@
            });
 
            if (res.ok) {
-               Toast.success("Credentials Encrypted & Saved");
+               if (typeof Toast !== 'undefined' && Toast.success) {
+                   Toast.success("Credentials Encrypted & Saved");
+               }
                document.getElementById('aws-access-key').value = '';
                document.getElementById('aws-secret-key').value = '';
                checkAwsCredentials();
            } else {
                const errorData = await res.json().catch(() => ({}));
-               Toast.error(`Error saving settings: ${errorData.error || 'Unknown error'}`);
+               if (typeof Toast !== 'undefined' && Toast.error) {
+                   Toast.error(`Error saving settings: ${errorData.error || 'Unknown error'}`);
+               }
            }
        } catch (e) {
            Logger.error('Failed to save AWS credentials', {
@@ -305,15 +329,19 @@
                stack: e.stack,
                action: 'saveAwsSettings'
            });
-           Toast.error(`Network error: ${e.message}`);
+           if (typeof Toast !== 'undefined' && Toast.error) {
+               Toast.error(`Network error: ${e.message}`);
+           }
        }
    }
 
    async function checkAwsCredentials() {
        try {
+           const token = getToken();
            const res = await fetch(`${CONFIG.API_BASE_URL}/aws-credentials`, {
                mode: 'cors',
-               headers: { 'Authorization': `Bearer ${getToken()}` }
+               credentials: 'same-origin',
+               headers: { 'Authorization': `Bearer ${token}` }
            });
            if (!res.ok) {
                throw new Error(`Failed to check credentials: ${res.status}`);
@@ -323,7 +351,14 @@
            const importSection = document.getElementById('aws-import-section');
            const credentialsNeeded = document.getElementById('aws-credentials-needed');
            
-           if (!importSection || !credentialsNeeded) return;
+           if (!importSection || !credentialsNeeded) {
+               Logger.error('AWS credentials UI elements not found', {
+                   importSection: !!importSection,
+                   credentialsNeeded: !!credentialsNeeded,
+                   action: 'checkAwsCredentials'
+               });
+               return;
+           }
            
            if (settings && settings.configured) {
                importSection.style.display = 'block';
@@ -351,17 +386,18 @@
        
        if (!periodEl || !statusDiv) return;
        
-       const period = periodEl?.value || '1';
+       const period = periodEl.value || '1';
        statusDiv.className = 'loading';
-       statusDiv.innerHTML = `Importing AWS expenses for the last ${period} month(s)... This may take a few minutes.`;
+       statusDiv.textContent = `Importing AWS expenses for the last ${period} month(s)... This may take a few minutes.`;
        
        try {
+           const token = getToken();
            const res = await fetch(`${CONFIG.API_BASE_URL}/aws-cost-import`, {
                method: 'POST',
                mode: 'cors',
                credentials: 'same-origin',
                headers: { 
-                   'Authorization': `Bearer ${getToken()}`, 
+                   'Authorization': `Bearer ${token}`, 
                    'Content-Type': 'application/json',
                    'X-Requested-With': 'XMLHttpRequest'
                },

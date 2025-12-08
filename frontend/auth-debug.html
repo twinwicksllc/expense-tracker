@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auth Debug</title>
+</head>
+<body>
+    <h1>Authentication Debug</h1>
+    <div id="status"></div>
+    <button onclick="clearAndReload()">Clear Storage & Reload</button>
+    
+    <script>
+        const status = document.getElementById('status');
+        const idToken = localStorage.getItem('idToken');
+        const accessToken = localStorage.getItem('accessToken');
+        const email = localStorage.getItem('userEmail');
+        
+        let html = '<h2>LocalStorage Contents:</h2>';
+        html += `<p><strong>ID Token:</strong> ${idToken ? idToken.substring(0, 50) + '...' : 'NOT FOUND'}</p>`;
+        html += `<p><strong>Access Token:</strong> ${accessToken ? accessToken.substring(0, 50) + '...' : 'NOT FOUND'}</p>`;
+        html += `<p><strong>Email:</strong> ${email || 'NOT FOUND'}</p>`;
+        
+        if (idToken) {
+            try {
+                const payload = JSON.parse(atob(idToken.split('.')[1]));
+                html += '<h2>Token Payload:</h2>';
+                html += `<pre>${JSON.stringify(payload, null, 2)}</pre>`;
+                
+                const exp = payload.exp * 1000;
+                const now = Date.now();
+                const expired = exp < now;
+                
+                html += `<p><strong>Expires:</strong> ${new Date(exp).toLocaleString()}</p>`;
+                html += `<p><strong>Status:</strong> ${expired ? '❌ EXPIRED' : '✅ VALID'}</p>`;
+                html += `<p><strong>Time until expiry:</strong> ${Math.floor((exp - now) / 1000 / 60)} minutes</p>`;
+            } catch (e) {
+                html += `<p style="color: red;">Error parsing token: ${e.message}</p>`;
+            }
+        }
+        
+        status.innerHTML = html;
+        
+        function clearAndReload() {
+            localStorage.clear();
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>

@@ -30,3 +30,4 @@ npm-debug.log*
 *.temp
 
 docs/google-oauth-config.md
+aws/

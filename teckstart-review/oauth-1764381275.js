@@ -5,7 +5,8 @@ function login() {
 
 function logout() {
     localStorage.clear();
-    window.location.href = CONFIG.COGNITO.SIGN_OUT_URI;
+    const logoutUrl = `${CONFIG.COGNITO.DOMAIN}/logout?client_id=${CONFIG.COGNITO.CLIENT_ID}&logout_uri=${encodeURIComponent(CONFIG.COGNITO.SIGN_OUT_URI)}`;
+    window.location.href = logoutUrl;
 }
 
 function getToken() {

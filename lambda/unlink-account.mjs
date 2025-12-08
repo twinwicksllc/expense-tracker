@@ -84,7 +84,7 @@ export const handler = async (event) => {
 
   // CORS headers - restricted to trusted domain
   const headers = {
-    'Access-Control-Allow-Origin': 'https://app.twin-wicks.com',
+    'Access-Control-Allow-Origin': 'https://teckstart.com',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Content-Type': 'application/json'

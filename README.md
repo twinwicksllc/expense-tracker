@@ -90,15 +90,15 @@ expense-tracker-repo/
   - GET/POST/DELETE `/aws-credentials` - AWS credentials management
   - POST `/aws-cost-import` - Manual cost import trigger
 
-**CORS Configuration**: All endpoints properly configured with CORS headers for `app.twin-wicks.com` origin. OPTIONS methods use MOCK integration with JavaScript object notation template `{statusCode:200}` for reliable preflight handling.
+**CORS Configuration**: All endpoints properly configured with CORS headers for `teckstart.com` origin. OPTIONS methods use MOCK integration with JavaScript object notation template `{statusCode:200}` for reliable preflight handling.
 
 ### S3 Buckets
-- `twin-wicks.com` - Frontend hosting
+- `teckstart.com` - Frontend hosting
 - Receipts bucket (configured in Lambda environment)
 
 ### CloudFront Distribution
 - **Distribution ID**: EB9MXBNYV9HVD
-- **Domain**: app.twin-wicks.com
+- **Domain**: teckstart.com
 
 ## Environment Variables
 
@@ -122,8 +122,8 @@ RECEIPTS_BUCKET=<receipts-bucket-name>
 
 ```bash
 # Upload to S3
-aws s3 cp frontend/index.html s3://twin-wicks.com/index.html --content-type "text/html"
-aws s3 cp frontend/app.js s3://twin-wicks.com/app.js --content-type "application/javascript"
+aws s3 cp frontend/index.html s3://teckstart.com/index.html --content-type "text/html"
+aws s3 cp frontend/app.js s3://teckstart.com/app.js --content-type "application/javascript"
 
 # Invalidate CloudFront cache
 aws cloudfront create-invalidation \

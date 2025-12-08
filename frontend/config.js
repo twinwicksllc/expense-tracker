@@ -6,7 +6,7 @@ const CONFIG = {
         CLIENT_ID: '6jb82h9lrvh29505t1ihavfte9',
         REGION: 'us-east-1',
         DOMAIN: 'https://expense-tracker-prod-v2.auth.us-east-1.amazoncognito.com',
-        REDIRECT_URI: 'https://app.twin-wicks.com/callback',
-        SIGN_OUT_URI: 'https://app.twin-wicks.com'
+        REDIRECT_URI: 'https://teckstart.com/auth-callback.html',
+        SIGN_OUT_URI: 'https://teckstart.com'
     }
 };

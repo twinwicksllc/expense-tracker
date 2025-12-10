@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # Script to list git branches sorted by committer date
 # This helps identify recently active branches and find stale ones

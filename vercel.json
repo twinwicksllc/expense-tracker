@@ -1,0 +1,27 @@
+{
+  "version": 2,
+  "name": "expense-tracker",
+  "builds": [
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/auth-callback.html",
+      "dest": "/auth-callback.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "functions": {},
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://fcnq8h7mai.execute-api.us-east-1.amazonaws.com/prod/$1"
+    }
+  ]
+}

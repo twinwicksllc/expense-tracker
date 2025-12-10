@@ -254,6 +254,19 @@ sam local invoke expense-tracker-prod-projects \
   --event test-events/get-projects.json
 ```
 
+### Developer Utilities
+
+The repository includes utility scripts to help with common development tasks:
+
+#### List Branches by Date
+```bash
+bash list-branches-by-date.sh
+```
+Lists all git branches sorted by most recent commit date. Useful for:
+- Identifying recently active branches
+- Finding stale branches that may need cleanup
+- Understanding branch activity timeline
+
 ## Security
 
 - All API endpoints protected by Cognito authorizer
